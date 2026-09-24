@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Egg Corner - Professional POS System</title>
+    <title>The Egg Corner - Cloud Connected POS</title>
+    <!-- Firebase SDKs for Realtime Multi-Device Sync -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -11,6 +14,7 @@
             --accent-orange: #f97316;
             --accent-green: #22c55e;
             --accent-red: #ef4444;
+            --accent-yellow: #eab308;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
         }
@@ -18,59 +22,62 @@
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Top Header Bar */
+        /* Top Bar */
         .top-header { background: var(--card-bg); height: 55px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #334155; }
         .menu-toggle { font-size: 24px; cursor: pointer; color: var(--text-main); background: none; border: none; }
-        .app-title { font-size: 18px; font-weight: bold; }
+        .app-title { font-size: 18px; font-weight: bold; color: var(--accent-orange); }
 
         /* Side Drawer Navigation */
         .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none; }
         .drawer-overlay.active { display: block; }
-        .side-drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: #0b1329; z-index: 101; transition: 0.3s ease; padding: 20px 10px; display: flex; flex-direction: column; border-right: 1px solid #334155; }
+        .side-drawer { position: fixed; top: 0; left: -290px; width: 290px; height: 100%; background: #0b1329; z-index: 101; transition: 0.3s ease; padding: 20px 10px; display: flex; flex-direction: column; border-right: 1px solid #334155; overflow-y: auto; }
         .side-drawer.open { left: 0; }
-        .drawer-user { padding: 15px; background: var(--card-bg); border-radius: 8px; margin-bottom: 20px; font-size: 14px; color: var(--accent-orange); }
-        .nav-item { padding: 12px 15px; border-radius: 8px; margin-bottom: 5px; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 10px; text-decoration: none; font-size: 15px; }
+        .drawer-user { padding: 12px; background: var(--card-bg); border-radius: 8px; margin-bottom: 15px; font-size: 13px; border-left: 4px solid var(--accent-orange); }
+        .nav-item { padding: 10px 12px; border-radius: 6px; margin-bottom: 4px; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; text-decoration: none; }
         .nav-item:hover, .nav-item.active { background: var(--accent-orange); color: #fff; font-weight: bold; }
-        .nav-group-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 15px 0 5px 10px; letter-spacing: 1px; }
+        .nav-group-title { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 4px 8px; letter-spacing: 1px; font-weight: bold; }
 
         /* Main Screen Container */
         .main-container { flex: 1; padding: 15px; overflow-y: auto; }
         .page { display: none; }
         .page.active { display: block; }
 
-        /* Dashboard Overview Cards */
-        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .dash-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid #334155; }
+        /* Dashboard Overview Grid */
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .dash-card { background: var(--card-bg); padding: 15px; border-radius: 10px; border: 1px solid #334155; }
         .dash-card small { color: var(--text-muted); font-size: 12px; }
-        .dash-card h2 { font-size: 22px; margin-top: 5px; }
+        .dash-card h2 { font-size: 20px; margin-top: 5px; color: #fff; }
 
-        /* Tables Grid */
-        .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
-        .table-btn { background: var(--accent-green); color: #fff; border: none; padding: 15px 5px; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; }
+        /* Tables & Sub-Tables Grid */
+        .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; margin-top: 10px; }
+        .table-btn { background: var(--accent-green); color: #fff; border: none; padding: 15px 5px; border-radius: 10px; text-align: center; cursor: pointer; font-weight: bold; }
         .table-btn.occupied { background: var(--accent-orange); }
 
-        /* UI Dialog Modal */
+        /* UI Dialog Modals */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
-        .modal-body { background: var(--card-bg); padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; }
-        .modal-body h3 { margin-bottom: 15px; color: var(--accent-orange); }
-        .subtable-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .modal-body { background: var(--card-bg); padding: 20px; border-radius: 12px; width: 90%; max-width: 420px; text-align: center; max-height: 85vh; overflow-y: auto; }
+        .subtable-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
 
-        /* Buttons & Forms */
-        .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+        /* Buttons & Controls */
+        .btn { padding: 10px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 14px; }
         .btn-green { background: var(--accent-green); color: #fff; }
         .btn-orange { background: var(--accent-orange); color: #fff; }
         .btn-red { background: var(--accent-red); color: #fff; }
         input, select { width: 100%; padding: 10px; margin-bottom: 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; }
 
-        /* Login Screen */
+        /* Menu Categories & Items */
+        .cat-badge { display: inline-block; padding: 6px 12px; background: #334155; border-radius: 20px; font-size: 12px; margin-right: 5px; margin-bottom: 8px; cursor: pointer; }
+        .cat-badge.active { background: var(--accent-orange); font-weight: bold; }
+
+        /* Login Screen Overlay */
         .login-box { position: fixed; inset: 0; background: var(--bg-dark); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 20px; }
         .login-card { background: var(--card-bg); padding: 25px; border-radius: 12px; width: 100%; max-width: 320px; border: 1px solid var(--accent-orange); text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- Login Dialog -->
+    <!-- 🔑 LOGIN SCREEN -->
     <div class="login-box" id="login-screen">
         <div class="login-card">
             <h2 style="color:var(--accent-orange); margin-bottom:15px;">🍳 The Egg Corner</h2>
@@ -79,147 +86,275 @@
                 <option value="counter">Counter (काउंटर)</option>
                 <option value="waiter-1">Waiter 1 (वेटर १)</option>
                 <option value="waiter-2">Waiter 2 (वेटर २)</option>
+                <option value="waiter-3">Waiter 3 (वेटर ३)</option>
                 <option value="kitchen">Kitchen (किचन)</option>
             </select>
             <input type="password" id="login-pin" placeholder="PIN (Default: 1234)">
-            <button class="btn btn-orange" style="width:100%" onclick="login()">Login</button>
+            <button class="btn btn-orange" style="width:100%" onclick="login()">System Login</button>
         </div>
     </div>
 
-    <!-- Header Navigation Bar -->
+    <!-- 🔝 TOP HEADER -->
     <div class="top-header">
         <button class="menu-toggle" onclick="toggleDrawer()">☰</button>
-        <div class="app-title">POS System</div>
+        <div class="app-title">The Egg Corner POS</div>
         <small id="user-tag" style="color:var(--accent-orange); font-weight:bold;"></small>
     </div>
 
-    <!-- Side Overlay & Drawer Menu -->
+    <!-- ☰ SIDE DRAWER NAVIGATION -->
     <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
     <div class="side-drawer" id="side-drawer">
         <div class="drawer-user">
             <b id="drawer-user-name">Demo Owner</b><br>
-            <small id="drawer-user-role">OWNER</small>
+            <small id="drawer-user-role" style="color:var(--accent-orange);">OWNER</small>
         </div>
         
-        <div class="nav-item active" onclick="switchPage('dashboard')">📊 Dashboard</div>
-        <div class="nav-item" onclick="switchPage('waiter')">🍽️ Waiter POS</div>
-        <div class="nav-item" onclick="switchPage('kitchen')">👨‍🍳 Kitchen</div>
-        <div class="nav-item" onclick="switchPage('counter')">🧾 Counter</div>
+        <!-- CORE PAGES -->
+        <div class="nav-item active" id="nav-dashboard" onclick="switchPage('dashboard')">📊 Dashboard</div>
+        <div class="nav-item" id="nav-waiter-pos" onclick="switchPage('waiter')">🍽️ Waiter POS</div>
+        <div class="nav-item" id="nav-counter" onclick="switchPage('counter')">🧾 Counter</div>
+        <div class="nav-item" id="nav-kitchen" onclick="switchPage('kitchen')">👨‍🍳 Kitchen</div>
         
-        <div class="nav-group-title">ADMIN</div>
+        <!-- REPORT SECTION -->
+        <div class="nav-group-title" id="sec-report-title">REPORT</div>
+        <div class="nav-item" id="nav-sale-report" onclick="switchPage('sale-report')">📈 Sale Report</div>
+        <div class="nav-item" id="nav-payment" onclick="switchPage('payment')">💳 Payment</div>
+        <div class="nav-item" id="nav-item-sales" onclick="switchPage('item-sales')">🥗 Items Sales</div>
+        <div class="nav-item" id="nav-audit-log" onclick="switchPage('audit-log')">📜 Audit Log</div>
+
+        <!-- ADMIN SECTION -->
+        <div class="nav-group-title" id="sec-admin-title">ADMIN</div>
         <div class="nav-item" id="nav-manage-menu" onclick="switchPage('manage-menu')">🍳 Manage Menu</div>
         <div class="nav-item" id="nav-manage-tables" onclick="switchPage('manage-tables')">🪑 Manage Tables</div>
+        <div class="nav-item" id="nav-users" onclick="switchPage('users')">👥 Users</div>
+        <div class="nav-item" id="nav-settings" onclick="switchPage('settings')">⚙️ Settings</div>
 
-        <div style="margin-top:auto">
+        <!-- LOGOUT -->
+        <div style="margin-top:auto; padding-top:15px;">
             <button class="btn btn-red" style="width:100%" onclick="logout()">Logout</button>
         </div>
     </div>
 
-    <!-- Main Container Pages -->
+    <!-- 📱 MAIN CONTENT PAGES -->
     <div class="main-container">
 
-        <!-- 1. DASHBOARD PAGE -->
+        <!-- 1. DASHBOARD -->
         <div class="page active" id="page-dashboard">
-            <h2>Dashboard</h2>
-            <p style="color:var(--text-muted); margin-bottom:15px;">Today's Overview</p>
-            
+            <h2>Dashboard Overview</h2>
+            <p style="color:var(--text-muted); margin-bottom:15px;">Live Realtime Outlet Analytics</p>
             <div class="dash-grid">
-                <div class="dash-card"><small>Sales</small><h2 id="d-sales">₹0</h2></div>
+                <div class="dash-card"><small>Today Sales</small><h2 id="d-sales">₹0</h2></div>
                 <div class="dash-card"><small>Total Bills</small><h2 id="d-bills">0</h2></div>
                 <div class="dash-card"><small>Kitchen Pending</small><h2 id="d-pending" style="color:var(--accent-orange);">0</h2></div>
-                <div class="dash-card"><small>Active Tables</small><h2 id="d-active">0</h2></div>
+                <div class="dash-card"><small>Active Tables</small><h2 id="d-active" style="color:var(--accent-green);">0</h2></div>
             </div>
         </div>
 
-        <!-- 2. WAITER POS PAGE -->
+        <!-- 2. WAITER POS -->
         <div class="page" id="page-waiter">
-            <h3>Select Table</h3>
+            <h3>Select Dining Table</h3>
             <div class="table-grid" id="tables-container"></div>
 
-            <div id="order-section" style="display:none; margin-top:20px;">
-                <h4 id="selected-table-title" style="color:var(--accent-orange); margin-bottom:10px;">Selected Table: None</h4>
+            <div id="order-section" style="display:none; margin-top:20px; background:var(--card-bg); padding:15px; border-radius:10px;">
+                <h4 id="selected-table-title" style="color:var(--accent-orange); margin-bottom:10px;">Table: None</h4>
                 
-                <h4>Select Dish</h4>
-                <div id="dishes-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:10px; margin:10px 0;"></div>
+                <div id="categories-bar" style="margin-bottom:10px;"></div>
+                <div id="dishes-container" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; margin-bottom:15px;"></div>
 
-                <h4>Cart List</h4>
-                <div id="cart-items" style="background:var(--card-bg); padding:10px; border-radius:8px; margin-bottom:10px;"></div>
+                <h4>Order Summary (Cart)</h4>
+                <div id="cart-items" style="background:#0f172a; padding:10px; border-radius:8px; margin:10px 0; min-height:50px;"></div>
 
-                <button class="btn btn-orange" style="width:100%" onclick="sendOrderToKitchen()">Send Order To Kitchen</button>
+                <button class="btn btn-orange" style="width:100%; font-size:16px;" onclick="sendOrderToKitchen()">🚀 Send Order To Kitchen</button>
             </div>
         </div>
 
-        <!-- 3. KITCHEN KDS PAGE -->
-        <div class="page" id="page-kitchen">
-            <h2>🔥 Kitchen Orders</h2>
-            <div id="kitchen-orders" style="margin-top:15px;"></div>
-        </div>
-
-        <!-- 4. COUNTER BILLING PAGE -->
+        <!-- 3. COUNTER BILLING -->
         <div class="page" id="page-counter">
-            <h2>🧾 Counter Live Bills</h2>
+            <h2>🧾 Counter Live Billing</h2>
             <div id="counter-orders" style="margin-top:15px;"></div>
         </div>
 
-        <!-- 5. MANAGE MENU -->
+        <!-- 4. KITCHEN KDS -->
+        <div class="page" id="page-kitchen">
+            <h2>👨‍🍳 Kitchen KDS Display</h2>
+            <div id="kitchen-orders" style="margin-top:15px;"></div>
+        </div>
+
+        <!-- REPORTS -->
+        <div class="page" id="page-sale-report"><h2>📈 Sale Report</h2><div id="report-sales-list" style="margin-top:15px;"></div></div>
+        <div class="page" id="page-payment"><h2>💳 Payment Breakdown</h2><p style="margin-top:10px;">Cash vs UPI Summary</p></div>
+        <div class="page" id="page-item-sales"><h2>🥗 Items Sales Analytics</h2><div id="item-sales-summary" style="margin-top:15px;"></div></div>
+        <div class="page" id="page-audit-log"><h2>📜 Audit Log</h2><p style="margin-top:10px;">All Staff Actions Recorded</p></div>
+
+        <!-- ADMIN PAGES -->
         <div class="page" id="page-manage-menu">
-            <h2>Manage Menu</h2>
+            <h2>🍳 Manage Menu Items</h2>
+            <input type="text" id="m-cat" placeholder="Category (eg. EGG BHURJI, OMLET)">
             <input type="text" id="m-name" placeholder="Dish Name">
             <input type="number" id="m-price" placeholder="Price (₹)">
-            <button class="btn btn-green" onclick="addMenu()">Add Dish</button>
+            <button class="btn btn-green" onclick="addMenu()">Add Dish To Menu</button>
             <div id="menu-crud-list" style="margin-top:15px;"></div>
         </div>
 
-        <!-- 6. MANAGE TABLES -->
         <div class="page" id="page-manage-tables">
-            <h2>Manage Tables</h2>
-            <input type="text" id="t-name" placeholder="Table Name (eg. Table 1)">
-            <button class="btn btn-green" onclick="addTable()">Add Main Table</button>
+            <h2>🪑 Manage Tables</h2>
+            <input type="text" id="t-name" placeholder="Table Name (eg. Table 1, Table 2, Parcel)">
+            <button class="btn btn-green" onclick="addTable()">Add Table</button>
             <div id="table-crud-list" style="margin-top:15px;"></div>
+        </div>
+
+        <div class="page" id="page-users"><h2>👥 Staff & User Management</h2><p style="margin-top:10px;">Manage Waiters & PINs</p></div>
+        <div class="page" id="page-settings"><h2>⚙️ Outlet Settings</h2><p style="margin-top:10px;">Sound & Printing Settings</p></div>
+
+    </div>
+
+    <!-- SUB-TABLE & EXTRA ADD-ONS MODAL -->
+    <div class="modal" id="subtable-modal">
+        <div class="modal-body">
+            <h3>Select Person / Sub-Table</h3>
+            <p id="subtable-parent-title" style="color:var(--accent-orange); font-weight:bold;">Table 1</p>
+            <div class="subtable-btns" id="subtable-options"></div>
+            <button class="btn btn-red" style="margin-top:15px; width:100%;" onclick="closeModal('subtable-modal')">Cancel</button>
         </div>
     </div>
 
-    <!-- Sub Table Selection Dialog -->
-    <div class="modal" id="subtable-modal">
+    <!-- DISH CUSTOMIZATION / ADD-ONS MODAL -->
+    <div class="modal" id="addon-modal">
         <div class="modal-body">
-            <h3>Select Sub-Table Person</h3>
-            <p id="subtable-parent-title">Table 1</p>
-            <div class="subtable-btns" id="subtable-options"></div>
-            <button class="btn btn-red" style="margin-top:15px; width:100%;" onclick="closeSubModal()">Cancel</button>
+            <h3 id="addon-dish-title">Egg Bhurji</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">Select Extra Customization (Add-ons):</p>
+            <div id="addons-list" style="text-align:left; margin-bottom:15px;">
+                <label><input type="checkbox" class="addon-opt" value="Extra Cheese" data-price="30"> Extra Cheese (+₹30)</label><br>
+                <label><input type="checkbox" class="addon-opt" value="Only Butter" data-price="30"> Only Butter (+₹30)</label><br>
+                <label><input type="checkbox" class="addon-opt" value="Extra Egg" data-price="20"> Extra Egg (+₹20)</label><br>
+                <label><input type="checkbox" class="addon-opt" value="Extra Pav Jodi" data-price="10"> Extra Pav Jodi (+₹10)</label><br>
+                <label><input type="checkbox" class="addon-opt" value="With Half Fry" data-price="40"> With Half Fry (+₹40)</label>
+            </div>
+            <button class="btn btn-green" style="width:100%" onclick="confirmAddToCart()">Add Dish To Cart</button>
         </div>
     </div>
 
     <script>
-        // Core State
-        let currentUser = null;
+        // 1. FIREBASE REALTIME DATABASE CONFIGURATION (Free Shared Public Cloud Storage)
+        const firebaseConfig = {
+            databaseURL: "https://egg-corner-pos-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Application Global States
+        let currentUserRole = 'owner';
+        let currentUserName = 'Owner';
         let selectedMainTable = null;
         let selectedFullTable = null;
         let cart = [];
+        let pendingDishForAddon = null;
 
-        let mainTables = JSON.parse(localStorage.getItem('pos_tables')) || ["Table 1", "Table 2", "Table 3", "Table 4", "Parcel"];
-        let menuList = JSON.parse(localStorage.getItem('pos_menu')) || [
-            { id: 1, name: "Egg Bhurji", price: 80 },
-            { id: 2, name: "Egg Rice", price: 120 }
+        let mainTables = ["Table 1", "Table 2", "Table 3", "Table 4", "Table 5", "Table 6", "Parcel"];
+        let defaultMenu = [
+            { id:1, cat:"EGG BHURJI", name:"EGG BHURJI", price:60 },
+            { id:2, cat:"EGG BHURJI", name:"GREEN BHURJI", price:60 },
+            { id:3, cat:"EGG BHURJI", name:"BOILED BHURJI", price:70 },
+            { id:4, cat:"EGG BHURJI", name:"GREEN BOILED BHURJI", price:70 },
+            { id:5, cat:"EGG BHURJI", name:"HALF COOK BHURJI", price:60 },
+            { id:6, cat:"EGG BHURJI", name:"TOMATO BHURJI", price:70 },
+            { id:7, cat:"BOILED SPECIAL", name:"BOILED MASALA", price:80 },
+            { id:8, cat:"BOILED SPECIAL", name:"STARTER", price:80 },
+            { id:9, cat:"BOILED SPECIAL", name:"BOILED EGG GRAVY", price:90 },
+            { id:10, cat:"BOILED SPECIAL", name:"AUSTRALIAN FRY", price:100 },
+            { id:11, cat:"BOILED SPECIAL", name:"THREE LAYERS", price:170 },
+            { id:12, cat:"BOILED SPECIAL", name:"ANDA GHOTALA", price:170 },
+            { id:13, cat:"RICE SPECIAL", name:"EGG RICE", price:90 },
+            { id:14, cat:"RICE SPECIAL", name:"BOILED MASALA RICE", price:110 },
+            { id:15, cat:"RICE SPECIAL", name:"BHURJI RICE", price:110 },
+            { id:16, cat:"OMLET", name:"OMLET", price:50 },
+            { id:17, cat:"OMLET", name:"BANJO", price:60 },
+            { id:18, cat:"OMLET", name:"SPL. OMLET", price:90 },
+            { id:19, cat:"HALF FRY SPL.", name:"HALF FRY", price:50 },
+            { id:20, cat:"HALF FRY SPL.", name:"HALF FRY BANJO", price:60 },
+            { id:21, cat:"HALF FRY SPL.", name:"FULL FRY", price:50 },
+            { id:22, cat:"HALF FRY SPL.", name:"GREEN FRY", price:90 },
+            { id:23, cat:"HALF FRY SPL.", name:"RED FRY", price:90 },
+            { id:24, cat:"BOILED EGGS", name:"BOILED EGG (2PIC)", price:30 },
+            { id:25, cat:"BOILED EGGS", name:"BOILED FRY (2PIC)", price:50 },
+            { id:26, cat:"BOILED EGGS", name:"ANDA PAV (2PIC)", price:40 },
+            { id:27, cat:"BOILED EGGS", name:"FRY ANDA PAV (2PIC)", price:60 },
+            { id:28, cat:"MAGGI", name:"MASALA MAGGI", price:60 },
+            { id:29, cat:"MAGGI", name:"EGG MAGGI", price:70 },
+            { id:30, cat:"MAGGI", name:"BHURJI MAGGI", price:100 }
         ];
-        let orders = JSON.parse(localStorage.getItem('pos_orders')) || [];
-        let sales = JSON.parse(localStorage.getItem('pos_sales')) || [];
 
-        // Sound System Audio Synth
-        let currentAudio = null;
+        let menuList = defaultMenu;
+        let activeOrders = {};
+        let completedSales = [];
 
-        function playRingLoop() {
-            if(!currentAudio) {
-                currentAudio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                currentAudio.loop = true;
-                currentAudio.play().catch(e => console.log(e));
+        // Audio Notification Alarm
+        let alarmSynth = null;
+        function startAlarmLoop() {
+            if (!alarmSynth) {
+                alarmSynth = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                alarmSynth.loop = true;
+                alarmSynth.play().catch(e => console.log(e));
+            }
+        }
+        function stopAlarmLoop() {
+            if (alarmSynth) {
+                alarmSynth.pause();
+                alarmSynth = null;
             }
         }
 
-        function stopRingLoop() {
-            if(currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
+        // Realtime Sync Listener with Cloud Server
+        db.ref('orders').on('value', (snapshot) => {
+            activeOrders = snapshot.val() || {};
+            renderAll();
+            checkAudioTriggers();
+        });
+
+        db.ref('sales').on('value', (snapshot) => {
+            let data = snapshot.val() || {};
+            completedSales = Object.values(data);
+            renderDashboard();
+        });
+
+        // Login Logic with Role Permissions
+        function login() {
+            let role = document.getElementById('login-role').value;
+            currentUserRole = role;
+            currentUserName = role.toUpperCase();
+
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('user-tag').innerText = currentUserName;
+            document.getElementById('drawer-user-role').innerText = currentUserName;
+            document.getElementById('drawer-user-name').innerText = role;
+
+            applyRolePermissions(role);
+
+            if(role === 'kitchen') switchPage('kitchen');
+            else if(role === 'counter') switchPage('counter');
+            else if(role.startsWith('waiter')) switchPage('waiter');
+            else switchPage('dashboard');
+        }
+
+        // Restrict Access Based on User Role
+        function applyRolePermissions(role) {
+            let isAdmin = (role === 'owner');
+            let isWaiter = role.startsWith('waiter');
+            let isKitchen = (role === 'kitchen');
+
+            // Hide/Show Menu Items in Sidebar
+            document.getElementById('nav-dashboard').style.display = isWaiter || isKitchen ? 'none' : 'flex';
+            document.getElementById('sec-report-title').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('nav-sale-report').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-payment').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-item-sales').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-audit-log').style.display = isAdmin ? 'flex' : 'none';
+
+            document.getElementById('sec-admin-title').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('nav-manage-menu').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-manage-tables').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-users').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('nav-settings').style.display = isAdmin ? 'flex' : 'none';
         }
 
         function toggleDrawer() {
@@ -227,27 +362,12 @@
             document.getElementById('drawer-overlay').classList.toggle('active');
         }
 
-        function login() {
-            let role = document.getElementById('login-role').value;
-            currentUser = role;
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('user-tag').innerText = role.toUpperCase();
-            document.getElementById('drawer-user-role').innerText = role.toUpperCase();
-            document.getElementById('drawer-user-name').innerText = role;
-
-            if(role === 'kitchen') switchPage('kitchen');
-            else if(role === 'counter') switchPage('counter');
-            else if(role.startsWith('waiter')) switchPage('waiter');
-            else switchPage('dashboard');
-
-            renderAll();
-        }
-
         function logout() { location.reload(); }
 
         function switchPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(`page-${pageId}`).classList.add('active');
+            let targetPage = document.getElementById(`page-${pageId}`);
+            if(targetPage) targetPage.classList.add('active');
             toggleDrawer();
             renderAll();
         }
@@ -255,26 +375,29 @@
         function renderAll() {
             renderDashboard();
             renderTables();
-            renderDishes();
+            renderDishes('EGG BHURJI');
             renderKitchen();
             renderCounter();
             renderAdmin();
         }
 
         function renderDashboard() {
-            let todaySales = sales.reduce((a,b) => a + b.amount, 0);
-            document.getElementById('d-sales').innerText = `₹${todaySales}`;
-            document.getElementById('d-bills').innerText = sales.length;
-            document.getElementById('d-pending').innerText = orders.filter(o => o.status === 'Pending').length;
-            document.getElementById('d-active').innerText = orders.filter(o => o.status !== 'Completed').length;
+            let totalVal = completedSales.reduce((a,b) => a + (b.amount || 0), 0);
+            let orderArray = Object.values(activeOrders);
+            document.getElementById('d-sales').innerText = `₹${totalVal}`;
+            document.getElementById('d-bills').innerText = completedSales.length;
+            document.getElementById('d-pending').innerText = orderArray.filter(o => o.status === 'Pending').length;
+            document.getElementById('d-active').innerText = orderArray.length;
         }
 
         function renderTables() {
             let container = document.getElementById('tables-container');
             container.innerHTML = '';
+            let orderArray = Object.values(activeOrders);
+
             mainTables.forEach(t => {
-                let isOccupied = orders.some(o => o.table.startsWith(t) && o.status !== 'Completed');
-                container.innerHTML += `<button class="table-btn ${isOccupied ? 'occupied' : ''}" onclick="openSubModal('${t}')">${t}</button>`;
+                let isOcc = orderArray.some(o => o.table && o.table.startsWith(t));
+                container.innerHTML += `<button class="table-btn ${isOcc ? 'occupied' : ''}" onclick="openSubModal('${t}')">${t}</button>`;
             });
         }
 
@@ -290,141 +413,166 @@
             document.getElementById('subtable-modal').classList.add('active');
         }
 
-        function closeSubModal() { document.getElementById('subtable-modal').classList.remove('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
         function selectFinalTable(fullT) {
             selectedFullTable = fullT;
-            closeSubModal();
+            closeModal('subtable-modal');
             document.getElementById('order-section').style.display = 'block';
-            document.getElementById('selected-table-title').innerText = `Selected Table: ${selectedFullTable}`;
+            document.getElementById('selected-table-title').innerText = `Selected: ${selectedFullTable}`;
         }
 
-        function renderDishes() {
-            let container = document.getElementById('dishes-container');
-            container.innerHTML = '';
-            menuList.forEach(m => {
-                container.innerHTML += `<div style="background:var(--card-bg); padding:10px; border-radius:8px; text-align:center; cursor:pointer;" onclick="addToCart(${m.id})">
-                    <b>${m.name}</b><br>₹${m.price}
+        function renderDishes(cat) {
+            let catContainer = document.getElementById('categories-bar');
+            let categories = [...new Set(menuList.map(m => m.cat))];
+            catContainer.innerHTML = categories.map(c => `<span class="cat-badge ${c===cat?'active':''}" onclick="renderDishes('${c}')">${c}</span>`).join('');
+
+            let dContainer = document.getElementById('dishes-container');
+            dContainer.innerHTML = '';
+            menuList.filter(m => m.cat === cat).forEach(m => {
+                dContainer.innerHTML += `<div style="background:#0f172a; padding:10px; border-radius:8px; text-align:center; cursor:pointer; border:1px solid #334155;" onclick="openAddonModal(${m.id})">
+                    <b>${m.name}</b><br><span style="color:var(--accent-orange)">₹${m.price}</span>
                 </div>`;
             });
         }
 
-        function addToCart(id) {
-            if(!selectedFullTable) return alert("Pahile Table Select Kara!");
-            let dish = menuList.find(m => m.id === id);
-            cart.push(dish);
+        function openAddonModal(dishId) {
+            if(!selectedFullTable) return alert("कृपया आधी Table निवडा!");
+            pendingDishForAddon = menuList.find(m => m.id === dishId);
+            document.getElementById('addon-dish-title').innerText = pendingDishForAddon.name;
+            document.querySelectorAll('.addon-opt').forEach(cb => cb.checked = false);
+            document.getElementById('addon-modal').classList.add('active');
+        }
+
+        function confirmAddToCart() {
+            let selectedAddons = [];
+            let extraPrice = 0;
+
+            document.querySelectorAll('.addon-opt:checked').forEach(cb => {
+                selectedAddons.push(cb.value);
+                extraPrice += parseFloat(cb.getAttribute('data-price'));
+            });
+
+            let finalItem = {
+                name: pendingDishForAddon.name,
+                basePrice: pendingDishForAddon.price,
+                addons: selectedAddons,
+                totalPrice: pendingDishForAddon.price + extraPrice
+            };
+
+            cart.push(finalItem);
+            closeModal('addon-modal');
             renderCart();
         }
 
         function renderCart() {
             let div = document.getElementById('cart-items');
-            div.innerHTML = cart.map((c,i) => `<div>${c.name} - ₹${c.price} <button class="btn btn-red" style="padding:2px 5px;" onclick="cart.splice(${i},1);renderCart();">✕</button></div>`).join('');
+            if(cart.length === 0) { div.innerHTML = '<small style="color:var(--text-muted)">No items added</small>'; return; }
+            div.innerHTML = cart.map((c,i) => `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;">
+                    <div><b>${c.name}</b> ${c.addons.length>0 ? `<small style="color:var(--accent-yellow)">(${c.addons.join(', ')})</small>`:''}</div>
+                    <div>₹${c.totalPrice} <button class="btn btn-red" style="padding:1px 5px; font-size:10px;" onclick="cart.splice(${i},1);renderCart();">✕</button></div>
+                </div>
+            `).join('');
         }
 
         function sendOrderToKitchen() {
-            if(cart.length === 0) return;
+            if(cart.length === 0) return alert("Cart रिकामे आहे!");
+            let orderId = 'ORD_' + Date.now();
             let newOrder = {
-                id: Date.now(),
+                id: orderId,
                 table: selectedFullTable,
-                waiter: currentUser,
+                waiter: currentUserName,
                 items: cart,
-                status: 'Pending'
+                status: 'Pending',
+                timestamp: Date.now()
             };
-            orders.push(newOrder);
-            localStorage.setItem('pos_orders', JSON.stringify(orders));
-            cart = [];
-            renderCart();
-            renderAll();
-            alert("Order Kitchen la geli!");
+
+            db.ref('orders/' + orderId).set(newOrder, (err) => {
+                if(!err) {
+                    alert("🚀 ऑर्डर किचनला पाठवली!");
+                    cart = [];
+                    renderCart();
+                }
+            });
         }
 
         function renderKitchen() {
             let list = document.getElementById('kitchen-orders');
             list.innerHTML = '';
-            let pending = orders.filter(o => o.status === 'Pending' || o.status === 'Preparing');
-            
-            if(pending.length > 0 && currentUser === 'kitchen') playRingLoop();
+            let orderArray = Object.values(activeOrders).filter(o => o.status === 'Pending' || o.status === 'Preparing');
 
-            pending.forEach(o => {
-                list.innerHTML += `<div style="background:var(--card-bg); padding:15px; border-radius:8px; margin-bottom:10px;">
-                    <h3>${o.table} (By ${o.waiter})</h3>
-                    <p>${o.items.map(i => i.name).join(', ')}</p>
-                    <div style="margin-top:10px;">
-                        <button class="btn btn-orange" onclick="startOrder(${o.id})">Start (Stop Ring)</button>
-                        <button class="btn btn-green" onclick="readyOrder(${o.id})">Ready Order</button>
+            if(orderArray.length === 0) { list.innerHTML = '<p style="color:var(--text-muted)">कोणतीही नवीन ऑर्डर प्रलंबित नाही.</p>'; return; }
+
+            orderArray.forEach(o => {
+                list.innerHTML += `<div style="background:var(--card-bg); padding:15px; border-radius:8px; margin-bottom:12px; border-left:5px solid var(--accent-orange)">
+                    <h3>${o.table} <small style="font-size:12px; color:var(--text-muted)">(Waiter: ${o.waiter})</small></h3>
+                    <div style="margin:10px 0;">
+                        ${o.items.map(i => `• <b>${i.name}</b>${i.addons && i.addons.length>0 ? `<span style="color:var(--accent-yellow)">[${i.addons.join(', ')}]</span>`:''}`).join('<br>')}
+                    </div>
+                    <div>
+                        <button class="btn btn-orange" onclick="updateOrderStatus('${o.id}', 'Preparing')">Start Cooking (Stop Ring)</button>
+                        <button class="btn btn-green" onclick="updateOrderStatus('${o.id}', 'Ready')">Order Ready</button>
                     </div>
                 </div>`;
             });
         }
 
-        function startOrder(id) {
-            stopRingLoop();
-            let o = orders.find(x => x.id === id);
-            if(o) { o.status = 'Preparing'; localStorage.setItem('pos_orders', JSON.stringify(orders)); renderAll(); }
-        }
-
-        function readyOrder(id) {
-            let o = orders.find(x => x.id === id);
-            if(o) { 
-                o.status = 'Ready'; 
-                localStorage.setItem('pos_orders', JSON.stringify(orders)); 
-                renderAll(); 
-            }
-        }
-
         function renderCounter() {
             let list = document.getElementById('counter-orders');
             list.innerHTML = '';
-            let active = orders.filter(o => o.status !== 'Completed');
+            let orderArray = Object.values(activeOrders);
 
-            // Waiter specific ring trigger
-            let myReadyOrders = orders.filter(o => o.status === 'Ready' && o.waiter === currentUser);
-            if(myReadyOrders.length > 0) {
-                playRingLoop();
-                alert(`🔔 Your Order is Ready for ${myReadyOrders[0].table}!`);
-            }
+            if(orderArray.length === 0) { list.innerHTML = '<p style="color:var(--text-muted)">सध्या चालू असलेली बिल्स नाहीत.</p>'; return; }
 
-            active.forEach(o => {
-                let total = o.items.reduce((a,b) => a + b.price, 0);
-                list.innerHTML += `<div style="background:var(--card-bg); padding:15px; border-radius:8px; margin-bottom:10px;">
-                    <h3>${o.table} - Status: <b style="color:var(--accent-green)">${o.status}</b></h3>
-                    <p>Total: ₹${total}</p>
-                    ${o.status === 'Ready' ? `<button class="btn btn-orange" onclick="stopRingLoop()">Stop Ring</button>` : ''}
-                    <button class="btn btn-green" onclick="payBill(${o.id}, ${total})">Complete & Pay</button>
+            orderArray.forEach(o => {
+                let billTotal = o.items.reduce((a,b) => a + b.totalPrice, 0);
+                list.innerHTML += `<div style="background:var(--card-bg); padding:15px; border-radius:8px; margin-bottom:12px; border-left:5px solid var(--accent-green)">
+                    <h3>${o.table} — <span style="color:var(--accent-yellow)">${o.status}</span></h3>
+                    <p>Total Bill: <b style="font-size:18px; color:var(--accent-green)">₹${billTotal}</b></p>
+                    <div style="margin-top:10px;">
+                        ${o.status === 'Ready' ? `<button class="btn btn-orange" onclick="stopAlarmLoop()">Stop Bell Alarm</button>` : ''}
+                        <button class="btn btn-green" onclick="completePayment('${o.id}', ${billTotal})">Paid & Complete</button>
+                    </div>
                 </div>`;
             });
         }
 
-        function payBill(id, amount) {
-            stopRingLoop();
-            let o = orders.find(x => x.id === id);
-            o.status = 'Completed';
-            sales.push({ id, amount, date: new Date().toLocaleDateString() });
-            localStorage.setItem('pos_orders', JSON.stringify(orders));
-            localStorage.setItem('pos_sales', JSON.stringify(sales));
-            renderAll();
+        function updateOrderStatus(id, status) {
+            stopAlarmLoop();
+            db.ref('orders/' + id + '/status').set(status);
+        }
+
+        function completePayment(id, amount) {
+            stopAlarmLoop();
+            db.ref('sales').push({ orderId: id, amount: amount, timestamp: Date.now() });
+            db.ref('orders/' + id).remove();
+        }
+
+        function checkAudioTriggers() {
+            let orderArray = Object.values(activeOrders);
+            if(currentUserRole === 'kitchen' && orderArray.some(o => o.status === 'Pending')) {
+                startAlarmLoop();
+            } else if(currentUserRole.startsWith('waiter') && orderArray.some(o => o.status === 'Ready' && o.waiter === currentUserName)) {
+                startAlarmLoop();
+            }
         }
 
         function renderAdmin() {
-            document.getElementById('menu-crud-list').innerHTML = menuList.map((m,i) => `<div>${m.name} - ₹${m.price} <button class="btn btn-red" onclick="menuList.splice(${i},1);saveAdmin();">Delete</button></div>`).join('');
-            document.getElementById('table-crud-list').innerHTML = mainTables.map((t,i) => `<div>${t} <button class="btn btn-red" onclick="mainTables.splice(${i},1);saveAdmin();">Delete</button></div>`).join('');
+            document.getElementById('menu-crud-list').innerHTML = menuList.map((m,i) => `<div style="padding:5px 0;">[${m.cat}] ${m.name} - ₹${m.price}</div>`).join('');
+            document.getElementById('table-crud-list').innerHTML = mainTables.map((t,i) => `<div style="padding:5px 0;">${t}</div>`).join('');
         }
 
         function addMenu() {
+            let c = document.getElementById('m-cat').value.toUpperCase() || 'EGG SPECIAL';
             let n = document.getElementById('m-name').value;
-            let p = document.getElementById('m-price').value;
-            if(n && p) { menuList.push({ id: Date.now(), name: n, price: parseFloat(p) }); saveAdmin(); }
+            let p = parseFloat(document.getElementById('m-price').value);
+            if(n && p) { menuList.push({ id: Date.now(), cat: c, name: n, price: p }); renderAll(); }
         }
 
         function addTable() {
             let t = document.getElementById('t-name').value;
-            if(t) { mainTables.push(t); saveAdmin(); }
-        }
-
-        function saveAdmin() {
-            localStorage.setItem('pos_menu', JSON.stringify(menuList));
-            localStorage.setItem('pos_tables', JSON.stringify(mainTables));
-            renderAll();
+            if(t) { mainTables.push(t); renderAll(); }
         }
     </script>
 </body>
