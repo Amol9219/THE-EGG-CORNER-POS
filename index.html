@@ -151,7 +151,75 @@ td{color:#344b40}
  else if(which==="outlets"){if(!allowed(["owner"]))throw Error("Owner permission आवश्यक आहे.");const data=await rows("outlets","id,name,code,mobile,address,is_active");root.innerHTML=header("NETWORK","Outlets","आउटलेटची माहिती व्यवस्थापित करा")+'<div class="card"><h2>आउटलेट जोडा</h2><form id="add-form"><div class="form-grid">'+[['name','Outlet name'],['code','Code'],['mobile','Mobile'],['address','Address']].map(f=>'<div class="field"><label>'+f[1]+'</label><input name="'+f[0]+'" '+(f[0]==="name"?"required":"")+'></div>').join("")+'</div><button class="btn primary">जतन करा</button></form><div id="save-msg" class="notice hidden"></div></div><div class="section"><h2>Outlets</h2></div>'+table(["Name","Code","Mobile","Address","Status"],data.map(x=>[esc(x.name),esc(x.code||"—"),esc(x.mobile||"—"),esc(x.address||"—"),x.is_active?"Active":"Inactive"]));$("add-form").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);const {error}=await db.from("outlets").insert({name:String(f.get("name")).trim(),code:f.get("code")||null,mobile:f.get("mobile")||null,address:f.get("address")||null});if(error)message($("save-msg"),"जतन झाले नाही: "+error.message,"error");else page("outlets")}}
  else if(which==="stock"){const data=await rows("inventory_batches","id,item_kind,batch_code,received_qty,available_qty,unit,expires_on,quality_status");root.innerHTML=header("INVENTORY","Stock & Batches","Batch-wise stock, expiry आणि FIFO overview")+'<div class="notice">सध्याच्या foundation मध्ये stock थेट edit करता येत नाही. Goods Receipt आणि Production workflows पूर्ण झाल्यावर approved transactions मधून batch records तयार होतील.</div>'+(data.length?table(["Batch","Type","Received","Available","Unit","Expiry","Quality"],data.map(x=>[esc(x.batch_code),esc(x.item_kind),esc(x.received_qty),esc(x.available_qty),esc(x.unit),esc(x.expires_on||"—"),esc(x.quality_status)])):'<div class="card" style="text-align:center;padding:30px 18px"><div class="icon" style="margin:0 auto 12px">'+svgIcon("boxes")+'</div><h2 style="margin:0 0 8px">अजून batch नोंदी नाहीत</h2><p class="muted" style="max-width:440px;margin:0 auto">पहिली goods receipt किंवा production batch workflow उपलब्ध झाल्यावर stock, expiry आणि quality status इथे दिसतील.</p></div>')}
  else if(which==="notifications"){const data=await rows("app_notifications","id,title,message,notification_type,read_at,created_at");root.innerHTML=header("INBOX","Notifications","तुमच्यासाठी असलेल्या सूचना")+table(["Title","Message","Type","Status"],data.map(x=>[esc(x.title),esc(x.message),esc(x.notification_type),x.read_at?"Read":"Unread"]))}
- else {const p={production:["PRODUCTION","Production","Recipe/BOM आणि raw material consumption पुढील टप्प्यात."],orders:["SALES OPERATIONS","Outlet Orders","Order approval, delivery आणि outlet-specific prices पुढील टप्प्यात."],suppliers:["PROCUREMENT","Suppliers & Purchases","Supplier master, PO numbering, rates आणि approval पुढील टप्प्यात."],receipts:["QUALITY","Goods Receipt & Quality","Partial receipt, batch tracking आणि quality inspection पुढील टप्प्यात."],returns:["AFTER-SALES","Returns / Damage","Outlet complaint आणि Owner approval workflow पुढील टप्प्यात."],bills:["FINANCE","Bills & Payments","Immutable bills, payment approval आणि balance tracking पुढील टप्प्यात."],reports:["REPORTS","Reports","Owner reports आणि Co-Owner monthly summary पुढील टप्प्यात."],audit:["SECURITY","User Activity Log","Immutable audit events पुढील टप्प्यात."],users:["ACCESS CONTROL","Users & Roles","Auth users आणि profiles सुरक्षितपणे जोडण्यासाठी Owner setup आवश्यक आहे."],settings:["CONFIGURATION","Settings","Business profile, logo, backup आणि restore safeguards पुढील टप्प्यात."]}[which]||["TEC MASALA","Module","या विभागावर काम सुरू आहे."];root.innerHTML=header(p[0],p[1],p[2])+'<div class="card"><div class="icon">⚙</div><h2 style="margin-top:14px">Module foundation</h2><p class="muted">या module चे database tables तयार आहेत. Validated forms, approval workflow, transactional stock updates, audit logging आणि role-isolation tests पुढील टप्प्यांत जोडले जातील. हा विभाग सध्या final transactions लिहीत नाही.</p></div>'}
+ else if(which==="reports"){
+ if(!allowed(["owner","co_owner"]))throw Error("Reports permission आवश्यक आहे.");
+ const [billRes,orderRes,productData,rawData,outletData]=await Promise.all([
+  db.from("bills").select("id,bill_number,issued_at,outlet_id,grand_total,paid_total,status").order("issued_at",{ascending:false}).limit(100),
+  db.from("outlet_orders").select("id,order_number,outlet_id,status,goods_total,delivery_charge,created_at").order("created_at",{ascending:false}).limit(100),
+  rows("products","id,name,current_stock,min_stock,is_active"),
+  profile.role==="owner"?rows("raw_materials","id,name,current_stock,min_stock,is_active"):Promise.resolve([]),
+  rows("outlets","id,name")
+ ]);
+ if(billRes.error)throw billRes.error;if(orderRes.error)throw orderRes.error;
+ const bills=billRes.data||[],orders=orderRes.data||[],outletNames=Object.fromEntries(outletData.map(x=>[x.id,x.name]));
+ const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+ const validBills=bills.filter(x=>x.status!=="cancelled");
+ const billedTotal=validBills.reduce((s,x)=>s+Number(x.grand_total||0),0);
+ const paidTotal=validBills.reduce((s,x)=>s+Number(x.paid_total||0),0);
+ const outstanding=Math.max(0,billedTotal-paidTotal);
+ const lowProducts=productData.filter(x=>x.is_active&&Number(x.current_stock||0)<=Number(x.min_stock||0));
+ const lowRaw=rawData.filter(x=>x.is_active&&Number(x.current_stock||0)<=Number(x.min_stock||0));
+ const states=["draft","submitted","needs_approval","confirmed","dispatched","delivered","cancelled"];
+ const statusLabels={draft:"Draft",submitted:"Submitted",needs_approval:"Needs approval",confirmed:"Confirmed",dispatched:"Dispatched",delivered:"Delivered",cancelled:"Cancelled"};
+ root.innerHTML=header("BUSINESS INTELLIGENCE","Reports & Overview","नोंदींवर आधारित व्यवसायाचा सारांश")+
+ '<div class="notice">हे सारांश अलीकडील जास्तीत जास्त 100 Bills आणि 100 Orders वर आधारित आहेत. पूर्ण आर्थिक कालावधीचा audited report समजू नका.</div>'+
+ '<div class="grid">'+card("receipt","Bills total",money(billedTotal),"अलीकडील non-cancelled bills")+
+ card("banknote","Recorded paid",money(paidTotal),"Bills मध्ये नोंदवलेली भरलेली रक्कम")+
+ card("chart-no-axes-combined","Outstanding",money(outstanding),"Bills total वजा paid")+
+ card("shopping-cart","Orders",orders.length,"अलीकडील 100 पर्यंत")+'</div>'+
+ '<div class="section"><h2>अलीकडील Bills</h2><span class="muted">'+bills.length+' पर्यंत नोंदी</span></div>'+
+ table(["Bill No.","Date","Outlet","Total","Paid","Balance","Status"],bills.map(x=>[esc(x.bill_number||"—"),x.issued_at?new Date(x.issued_at).toLocaleDateString("en-IN"):"—",esc(outletNames[x.outlet_id]||"—"),money(x.grand_total),money(x.paid_total),money(Math.max(0,Number(x.grand_total||0)-Number(x.paid_total||0))),esc(x.status||"—")]))+
+ '<div class="section"><h2>Order status snapshot</h2><span class="muted">अलीकडील Orders</span></div>'+
+ '<div class="grid">'+states.map(st=>card("shopping-cart",statusLabels[st],orders.filter(x=>x.status===st).length,"Orders")).join("")+'</div>'+
+ '<div class="section"><h2>अलीकडील Orders</h2></div>'+
+ table(["Order No.","Date","Outlet","Goods total","Delivery","Status"],orders.map(x=>[esc(x.order_number||"—"),x.created_at?new Date(x.created_at).toLocaleDateString("en-IN"):"—",esc(outletNames[x.outlet_id]||"—"),money(x.goods_total),money(x.delivery_charge),esc(statusLabels[x.status]||x.status||"—")]))+
+ '<div class="section"><h2>Stock attention</h2><span class="muted">Current stock ≤ minimum stock</span></div>'+
+ '<div class="grid">'+card("package","Low-stock products",lowProducts.length,"सक्रिय उत्पादने")+
+ (profile.role==="owner"?card("flask-conical","Low-stock raw materials",lowRaw.length,"सक्रिय कच्चा माल"):"")+'</div>'+
+ (lowProducts.length?'<div class="section"><h2>Products needing attention</h2></div>'+table(["Product","Current stock","Minimum"],lowProducts.map(x=>[esc(x.name),esc(x.current_stock),esc(x.min_stock)])):"")+
+ (profile.role==="owner"&&lowRaw.length?'<div class="section"><h2>Raw materials needing attention</h2></div>'+table(["Raw material","Current stock","Minimum"],lowRaw.map(x=>[esc(x.name),esc(x.current_stock),esc(x.min_stock)])):"");
+}
+else if(which==="users"){
+ if(!allowed(["owner"]))throw Error("Owner permission आवश्यक आहे.");
+ const [people,outlets]=await Promise.all([rows("profiles","id,full_name,mobile,role,outlet_id,is_active,created_at"),rows("outlets","id,name")]);
+ const om=Object.fromEntries(outlets.map(x=>[x.id,x.name]));
+ const roles={owner:"Owner",co_owner:"Co-Owner",outlet:"Outlet"};
+ root.innerHTML=header("ACCESS CONTROL","Users & Roles","लॉगिन प्रोफाइल, भूमिका आणि सक्रिय स्थिती")+
+ '<div class="notice">सुरक्षिततेसाठी इथे Auth password किंवा secret दाखवला जात नाही. नवीन व्यक्तीचा login आधी Supabase Authentication → Users मध्ये तयार करा; त्यानंतरच matching profile जोडा. सध्या हा विभाग read-only आहे.</div>'+
+ '<div class="grid">'+card("users","User profiles",people.length,"Profiles नोंदी")+
+ card("shield-check","Active profiles",people.filter(x=>x.is_active).length,"लॉगिनसाठी सक्रिय")+
+ card("store","Outlet users",people.filter(x=>x.role==="outlet").length,"Outlet भूमिका")+
+ card("users","Co-owners",people.filter(x=>x.role==="co_owner").length,"Co-Owner भूमिका")+'</div>'+
+ '<div class="section"><h2>Profile directory</h2><span class="muted">Login email हा Auth मध्येच पाहता येतो.</span></div>'+
+ table(["Name","Mobile","Role","Assigned outlet","Status","Created"],people.map(x=>[esc(x.full_name||"—"),esc(x.mobile||"—"),esc(roles[x.role]||x.role||"—"),esc(om[x.outlet_id]||"—"),x.is_active?'<span style="color:#047857;font-weight:700">Active</span>':'<span style="color:#b91c1c;font-weight:700">Inactive</span>',x.created_at?new Date(x.created_at).toLocaleDateString("en-IN"):"—"]));
+}
+else if(which==="audit"){
+ if(!allowed(["owner"]))throw Error("Owner permission आवश्यक आहे.");
+ const [logRes,people]=await Promise.all([
+  db.from("audit_log").select("id,actor_user_id,action,entity_type,entity_id,reason,created_at").order("created_at",{ascending:false}).limit(100),
+  rows("profiles","id,full_name,role")
+ ]);
+ if(logRes.error)throw logRes.error;
+ const actorNames=Object.fromEntries(people.map(x=>[x.id,(x.full_name||"User")+" · "+(x.role||"")]));
+ const logs=logRes.data||[];
+ root.innerHTML=header("SECURITY","User Activity Log","नोंदवलेली audit activity — read-only")+
+ '<div class="notice">इथे database मध्ये लिहिलेल्या audit entries दिसतात. सर्व modules मध्ये audit logging अजून जोडलेले नसल्याने हा पूर्ण system-wide activity log नाही.</div>'+
+ '<div class="grid">'+card("history","Audit entries",logs.length,"अलीकडील जास्तीत जास्त 100")+
+ card("users","Actors",new Set(logs.map(x=>x.actor_user_id).filter(Boolean)).size,"नोंदी करणारे Users")+'</div>'+
+ '<div class="section"><h2>Recent activity</h2></div>'+
+ table(["When","Actor","Action","Entity","Reference","Reason"],logs.map(x=>[x.created_at?new Date(x.created_at).toLocaleString("en-IN"):"—",esc(actorNames[x.actor_user_id]||"System / unknown"),esc(x.action||"—"),esc(x.entity_type||"—"),esc(x.entity_id||"—"),esc(x.reason||"—")]));
+}
+else {const p={production:["PRODUCTION","Production","Recipe/BOM आणि raw material consumption पुढील टप्प्यात."],orders:["SALES OPERATIONS","Outlet Orders","Order approval, delivery आणि outlet-specific prices पुढील टप्प्यात."],suppliers:["PROCUREMENT","Suppliers & Purchases","Supplier master, PO numbering, rates आणि approval पुढील टप्प्यात."],receipts:["QUALITY","Goods Receipt & Quality","Partial receipt, batch tracking आणि quality inspection पुढील टप्प्यात."],returns:["AFTER-SALES","Returns / Damage","Outlet complaint आणि Owner approval workflow पुढील टप्प्यात."],bills:["FINANCE","Bills & Payments","Immutable bills, payment approval आणि balance tracking पुढील टप्प्यात."],reports:["REPORTS","Reports","Owner reports आणि Co-Owner monthly summary पुढील टप्प्यात."],audit:["SECURITY","User Activity Log","Immutable audit events पुढील टप्प्यात."],users:["ACCESS CONTROL","Users & Roles","Auth users आणि profiles सुरक्षितपणे जोडण्यासाठी Owner setup आवश्यक आहे."],settings:["CONFIGURATION","Settings","Business profile, logo, backup आणि restore safeguards पुढील टप्प्यात."]}[which]||["TEC MASALA","Module","या विभागावर काम सुरू आहे."];root.innerHTML=header(p[0],p[1],p[2])+'<div class="card"><div class="icon">⚙</div><h2 style="margin-top:14px">Module foundation</h2><p class="muted">या module चे database tables तयार आहेत. Validated forms, approval workflow, transactional stock updates, audit logging आणि role-isolation tests पुढील टप्प्यांत जोडले जातील. हा विभाग सध्या final transactions लिहीत नाही.</p></div>'}
  }catch(err){root.innerHTML=header("ACCESS / DATA","हा विभाग उघडता आला नाही","डेटा किंवा permission तपासा.")+'<div class="notice error">'+esc(err.message)+'</div><button class="btn primary" id="retry">पुन्हा प्रयत्न करा</button>';$("retry").onclick=()=>page(which)}}
  db.auth.onAuthStateChange((event,session)=>{if(session?.user&&!profile)setTimeout(()=>start(session.user),0);if(!session?.user&&event==="SIGNED_OUT"){profile=null;user=null}});
  db.auth.getSession().then(({data})=>{if(data.session?.user)start(data.session.user)});
