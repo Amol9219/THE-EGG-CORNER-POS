@@ -5,7 +5,7 @@ This branch is the safe rebuild workspace for converting THE-EGG-CORNER-POS into
 ## Safety rules
 - Keep the existing `main` branch and current Firebase-backed Egg Corner POS unchanged while the rebuild is in progress.
 - Do not delete, overwrite, or migrate any existing Firebase/Supabase data as part of setup.
-- Use a separately confirmed database target for TEC Masala Business before applying schema changes.
+- Database target confirmed: use the empty Supabase project Amol9219's Project (isypmwpmqqcopgcmenqz) for the rebuild. Leave the older TEC-MASALA Supabase project and the legacy Egg Corner Firebase data untouched.
 - Never put service-role keys or other server secrets in browser code.
 - Enforce role permissions in the backend with database policies, not only by hiding UI.
 
