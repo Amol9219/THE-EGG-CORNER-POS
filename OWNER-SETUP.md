@@ -30,11 +30,13 @@ The Auth user must exist before the profile because `profiles.id` references `au
 
 ## Add outlet / co-owner accounts
 
-The **Users & Roles** page is currently a read-only profile directory; it does not create Auth accounts. For each new team member:
+The **Users & Roles** page can create and activate/deactivate profiles, but it does not create Auth login accounts. For each new team member:
 
-1. Create their login in Supabase Authentication → Users and copy the exact Auth UUID.
-2. For an outlet login, copy the target outlet's UUID from the Outlets page/database. For a co-owner login, no outlet assignment is required.
-3. Insert the matching profile only after the Auth user exists:
+1. Create their login in Supabase Authentication → Users, then copy the exact Auth UUID.
+2. Open the app's **Users & Roles** page and use **Existing Auth user ला profile जोडा**. Enter the exact UUID and display name, choose `outlet`, `co_owner`, or `owner`, and select the assigned outlet for an outlet user. The app creates the profile; duplicate UUIDs or UUIDs that do not exist in Auth are rejected by the database.
+3. The current logged-in profile cannot be deactivated from the page, and the UI blocks deactivation of the last active Owner.
+
+If using SQL instead of the UI, the matching profile can be inserted only after the Auth user exists:
 
 ```sql
 -- Outlet login
