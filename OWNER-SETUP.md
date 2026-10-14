@@ -28,6 +28,26 @@ values (
 
 The Auth user must exist before the profile because `profiles.id` references `auth.users.id`. Do not create a profile for an unrelated UUID.
 
+## Add outlet / co-owner accounts
+
+The **Users & Roles** page is currently a read-only profile directory; it does not create Auth accounts. For each new team member:
+
+1. Create their login in Supabase Authentication → Users and copy the exact Auth UUID.
+2. For an outlet login, copy the target outlet's UUID from the Outlets page/database. For a co-owner login, no outlet assignment is required.
+3. Insert the matching profile only after the Auth user exists:
+
+```sql
+-- Outlet login
+insert into public.profiles (id, full_name, role, outlet_id, is_active)
+values ('AUTH_USER_UUID'::uuid, 'Outlet user name', 'outlet', 'OUTLET_UUID'::uuid, true);
+
+-- Co-owner login
+insert into public.profiles (id, full_name, role, is_active)
+values ('AUTH_USER_UUID'::uuid, 'Co-owner name', 'co_owner', true);
+```
+
+Outlet accounts can submit orders only for their assigned outlet and create return requests for their own bills. Approval, dispatch, billing and payment approval remain Owner operations.
+
 ## Recommended first-time setup
 
 1. Sign in as Owner and open **Settings**. Save the business name, address, mobile number and (if applicable) GSTIN. These fields are printed on newly issued bills; editing the profile does not rewrite old bills.
@@ -65,7 +85,7 @@ The Auth user must exist before the profile because `profiles.id` references `au
 
 - Supabase's Security Advisor reported that **Leaked Password Protection is disabled**. Enable it in Authentication → Settings → Password Security.
 - Keep the publishable key in client code only; never use a `service_role` or secret key in the browser.
-- SQL workflow functions use `SECURITY INVOKER`, check the authenticated user/Owner role where required, and restrict anonymous execution. Row-level security remains enabled on the application tables.
+- Most transaction workflow functions use `SECURITY INVOKER`, validate roles/state, and restrict anonymous execution. Two narrow submission RPCs (`tec_create_outlet_order` and `tec_create_return_request`) intentionally use `SECURITY DEFINER` with an empty/locked `search_path` and explicit Auth role/outlet/bill checks. Direct `INSERT` privileges on the related order/return tables are revoked for `authenticated` so validated RPCs are the submission path. Supabase Security Advisor still reports a generic signed-in-`SECURITY DEFINER` warning for these two endpoints; they need continued review and end-to-end tests before Production use. Row-level security remains enabled on the application tables.
 
 ## Database migration files
 
