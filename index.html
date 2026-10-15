@@ -151,7 +151,7 @@ td{color:#344b40}
 
  else if(which==="outlets"){
  if(!allowed(["owner"]))throw Error("Owner permission आवश्यक आहे.");
- const [data,people]=await Promise.all([rows("outlets","id,name,code,mobile,address,is_active"),rows("profiles","id,full_name,email,mobile,role,outlet_id,is_active")]);
+ const [data,people]=await Promise.all([rows("outlets","id,name,code,mobile,address,is_active"),rows("profiles","id,full_name,mobile,role,outlet_id,is_active")]);
  const outletPeople=Object.fromEntries(data.map(x=>[x.id,people.filter(p=>p.role==="outlet"&&p.outlet_id===x.id)]));
  root.innerHTML=header("NETWORK","Outlets","प्रत्येक Outlet तयार करा आणि त्याच स्क्रीनवर Login जोडा")+
  '<div class="card"><h2>नवीन Outlet + Login</h2><p class="muted">Outlet ची माहिती भरा. त्याच वेळी manager चा email दिल्यास Outlet User चा login invite तयार होईल. Login नंतरही जोडता येईल.</p><form id="add-form"><div class="form-grid">'+
