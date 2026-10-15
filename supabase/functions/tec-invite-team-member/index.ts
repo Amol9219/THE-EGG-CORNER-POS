@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
     if (action === "update_login_email") {
       const userId = String(body.user_id || "").trim();
       const nextEmail = String(body.email || "").trim().toLowerCase();
-      if (!userId || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(nextEmail) || nextEmail.length > 254) throw new Error("User ID आणि योग्य नवीन email आवश्यक आहे.");
+      if (!userId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail) || nextEmail.length > 254) throw new Error("User ID आणि योग्य नवीन email आवश्यक आहे.");
       const { data: profileTarget, error: targetError } = await admin.from("profiles").select("id").eq("id", userId).maybeSingle();
       if (targetError || !profileTarget) throw new Error("User profile not found.");
       const { error: updateAuthError } = await admin.auth.admin.updateUserById(userId, { email: nextEmail, email_confirm: false });
