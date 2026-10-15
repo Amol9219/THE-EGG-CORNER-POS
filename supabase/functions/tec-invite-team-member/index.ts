@@ -28,6 +28,32 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Only an active Owner can invite team members." }), { status: 403, headers: cors });
     }
     const body = await req.json();
+    const action = String(body.action || "invite");
+    const redirectTo = "https://tec-masala-business-kw0f39z2l-amol-karbhari.vercel.app/";
+    if (action === "reset_password") {
+      const userId = String(body.user_id || "").trim();
+      if (!userId) throw new Error("User ID required.");
+      const { data: profileTarget, error: targetError } = await admin.from("profiles").select("id,is_active").eq("id", userId).maybeSingle();
+      if (targetError || !profileTarget) throw new Error("User profile not found.");
+      if (!profileTarget.is_active) throw new Error("पहिले User profile Active करा, मग password reset link तयार करा.");
+      const { data: targetAuth, error: targetAuthError } = await admin.auth.admin.getUserById(userId);
+      const targetEmail = targetAuth?.user?.email;
+      if (targetAuthError || !targetEmail) throw new Error("या User चा login email मिळाला नाही.");
+      const { data: reset, error: resetError } = await admin.auth.admin.generateLink({ type: "recovery", email: targetEmail, options: { redirectTo } });
+      if (resetError || !reset?.properties?.action_link) throw new Error(resetError?.message || "Password reset link तयार करता आली नाही.");
+      return new Response(JSON.stringify({ ok: true, email: targetEmail, invite_url: reset.properties.action_link, message: "Password reset link तयार आहे; User ला सुरक्षितपणे पाठवा." }), { status: 200, headers: cors });
+    }
+    if (action === "update_login_email") {
+      const userId = String(body.user_id || "").trim();
+      const nextEmail = String(body.email || "").trim().toLowerCase();
+      if (!userId || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(nextEmail) || nextEmail.length > 254) throw new Error("User ID आणि योग्य नवीन email आवश्यक आहे.");
+      const { data: profileTarget, error: targetError } = await admin.from("profiles").select("id").eq("id", userId).maybeSingle();
+      if (targetError || !profileTarget) throw new Error("User profile not found.");
+      const { error: updateAuthError } = await admin.auth.admin.updateUserById(userId, { email: nextEmail, email_confirm: false });
+      if (updateAuthError) throw new Error(updateAuthError.message);
+      return new Response(JSON.stringify({ ok: true, email: nextEmail, message: "Login email change request स्वीकारली. Auth settings नुसार नवीन email confirm करावा लागू शकतो." }), { status: 200, headers: cors });
+    }
+    if (action !== "invite") throw new Error("Unsupported action.");
     const email = String(body.email || "").trim().toLowerCase();
     const full_name = String(body.full_name || "").trim();
     const mobile = String(body.mobile || "").trim() || null;
@@ -43,7 +69,6 @@ Deno.serve(async (req: Request) => {
       if (outletError || !outlet || outlet.is_active !== true) throw new Error("Selected outlet is missing or inactive.");
     }
     if (role !== "outlet" && outlet_id) throw new Error("Only Outlet users can be assigned to an outlet.");
-    const redirectTo = "https://tec-masala-business-kw0f39z2l-amol-karbhari.vercel.app/";
     const { data: invite, error: inviteError } = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo, data: { full_name } } });
     if (inviteError || !invite?.user?.id || !invite?.properties?.action_link) throw new Error(inviteError?.message || "Could not generate invite link. Check Auth settings and whether this email already exists.");
     const { error: profileError } = await admin.from("profiles").insert({ id: invite.user.id, full_name, mobile, role, outlet_id: role === "outlet" ? outlet_id : null, is_active: true });
