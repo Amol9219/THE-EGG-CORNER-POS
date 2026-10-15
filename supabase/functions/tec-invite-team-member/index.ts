@@ -48,8 +48,9 @@ Deno.serve(async (req: Request) => {
     if (inviteError || !invite?.user?.id || !invite?.properties?.action_link) throw new Error(inviteError?.message || "Could not generate invite link. Check Auth settings and whether this email already exists.");
     const { error: profileError } = await admin.from("profiles").insert({ id: invite.user.id, full_name, mobile, role, outlet_id: role === "outlet" ? outlet_id : null, is_active: true });
     if (profileError) {
-      await admin.auth.admin.deleteUser(invite.user.id);
-      throw new Error("Profile creation failed: " + profileError.message);
+      // Do not delete the Auth user here: generateLink can return an existing user.
+      // Deleting that ID could destroy a pre-existing account. Report the error safely.
+      throw new Error("Profile creation failed: " + profileError.message + ". No Auth account was deleted; check whether this email already has a profile.");
     }
     return new Response(JSON.stringify({ ok: true, email, invite_url: invite.properties.action_link, message: "Invite link created. Share it securely with the team member; the link is not emailed automatically." }), { status: 200, headers: cors });
   } catch (err) {
