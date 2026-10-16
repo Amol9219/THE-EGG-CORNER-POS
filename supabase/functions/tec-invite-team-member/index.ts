@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
     }
     const body = await req.json();
     const action = String(body.action || "invite");
-    const redirectTo = "https://tec-masala-business-kw0f39z2l-amol-karbhari.vercel.app/";
+    const redirectTo = "https://tec-masala-business.vercel.app/";
     if (action === "reset_password") {
       const userId = String(body.user_id || "").trim();
       if (!userId) throw new Error("User ID required.");
