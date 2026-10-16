@@ -197,7 +197,46 @@ td{color:#344b40}
   btn.disabled=false;btn.textContent="Outlet जतन करा";
  };
 }
- else if(which==="stock"){const data=await rows("inventory_batches","id,item_kind,batch_code,received_qty,available_qty,unit,expires_on,quality_status");root.innerHTML=header("INVENTORY","Stock & Batches","Batch-wise stock, expiry आणि FIFO overview")+'<div class="notice">सध्याच्या foundation मध्ये stock थेट edit करता येत नाही. Goods Receipt आणि Production workflows पूर्ण झाल्यावर approved transactions मधून batch records तयार होतील.</div>'+(data.length?table(["Batch","Type","Received","Available","Unit","Expiry","Quality"],data.map(x=>[esc(x.batch_code),esc(x.item_kind),esc(x.received_qty),esc(x.available_qty),esc(x.unit),esc(x.expires_on||"—"),esc(x.quality_status)])):'<div class="card" style="text-align:center;padding:30px 18px"><div class="icon" style="margin:0 auto 12px">'+svgIcon("boxes")+'</div><h2 style="margin:0 0 8px">अजून batch नोंदी नाहीत</h2><p class="muted" style="max-width:440px;margin:0 auto">पहिली goods receipt किंवा production batch workflow उपलब्ध झाल्यावर stock, expiry आणि quality status इथे दिसतील.</p></div>')}
+ else if(which==="stock"){
+ const [batches,products,materials]=await Promise.all([
+  rows("inventory_batches","id,item_kind,product_id,raw_material_id,batch_code,received_qty,available_qty,unit,manufactured_on,expires_on,unit_cost,quality_status,source_type,created_at"),
+  rows("products","id,name,unit,current_stock,is_active"),
+  rows("raw_materials","id,name,unit,current_stock,is_active")
+ ]);
+ const productMap=Object.fromEntries(products.map(x=>[x.id,x]));
+ const materialMap=Object.fromEntries(materials.map(x=>[x.id,x]));
+ const activeProducts=products.filter(x=>x.is_active);
+ const stockRows=batches.filter(x=>x.quality_status==="accepted").sort((a,b)=>{
+  const da=a.manufactured_on||a.created_at||"",db=b.manufactured_on||b.created_at||"";
+  return da.localeCompare(db)||String(a.batch_code).localeCompare(String(b.batch_code));
+ }).map(x=>{
+  const item=x.item_kind==="product"?productMap[x.product_id]:materialMap[x.raw_material_id];
+  return [esc(item?.name||"Unknown item"),esc(x.batch_code),esc(x.item_kind==="product"?"तयार माल":"कच्चा माल"),esc(x.manufactured_on||"—"),esc(x.received_qty),esc(x.available_qty),esc(x.unit),x.unit_cost==null?"—":"₹"+Number(x.unit_cost).toFixed(2),esc(x.quality_status)];
+ });
+ root.innerHTML=header("INVENTORY","Stock & Batches","आधीचा stock, तारीखवार नवीन stock आणि FIFO batch balance")+
+ '<div class="grid">'+card(svgIcon("package"),"तयार माल",activeProducts.length,"Active products")+card(svgIcon("boxes"),"Accepted batches",batches.filter(x=>x.quality_status==="accepted").length,"FIFO साठी उपलब्ध batches")+card(svgIcon("flask-conical"),"कच्चा माल",materials.filter(x=>x.is_active).length,"Active raw materials")+card(svgIcon("layers"),"FIFO stock",batches.filter(x=>x.quality_status==="accepted").reduce((n,x)=>n+Number(x.available_qty||0),0).toFixed(3)+" kg","सर्व accepted batches")+'</div>'+
+ '<div class="section"><h2>FIFO stock वापरा</h2><span class="muted">सर्वात जुना accepted batch आधी कमी होईल</span></div>'+
+ '<div class="card"><form id="fifo-consume-form"><div class="form-grid"><div class="field"><label for="fifo-product">तयार माल</label><select id="fifo-product" required><option value="">निवडा</option>'+activeProducts.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.current_stock)+' '+esc(p.unit)+'</option>').join('')+'</select></div><div class="field"><label for="fifo-qty">वापरायचे प्रमाण (kg)</label><input id="fifo-qty" type="number" min="0.001" step="0.001" required placeholder="उदा. 2.500"></div><div class="field"><label for="fifo-ref-type">वापराचा प्रकार</label><select id="fifo-ref-type" required><option>Manual</option><option>Sale</option><option>Outlet dispatch</option></select></div><div class="field"><label for="fifo-ref-id">Reference ID (ऐच्छिक UUID)</label><input id="fifo-ref-id" type="text" placeholder="Order / dispatch UUID"></div><div class="field" style="grid-column:1/-1"><label for="fifo-reason">नोंद / कारण</label><input id="fifo-reason" type="text" placeholder="उदा. outlet dispatch"></div></div><button class="btn primary" id="fifo-consume-btn" type="submit">FIFO ने stock कमी करा</button><div id="fifo-msg" class="notice hidden"></div></form></div>'+
+ '<div class="section"><h2>Batch-wise stock</h2><span class="muted">आधीचा stock आणि तारीखवार नवीन batch</span></div>'+
+ (stockRows.length?table(["Item","Batch","Type","Date","Received","Available","Unit","Cost / unit","Quality"],stockRows):'<div class="card">अजून batch नोंदी नाहीत.</div>')+
+ '<div class="section"><h2>सध्याचा item-wise stock</h2></div>'+
+ table(["तयार माल","सध्याचा stock","Unit"],activeProducts.sort((a,b)=>a.name.localeCompare(b.name)).map(x=>[esc(x.name),esc(Number(x.current_stock||0).toFixed(3)),esc(x.unit)]))+
+ table(["कच्चा माल","सध्याचा stock","Unit"],materials.filter(x=>x.is_active).sort((a,b)=>a.name.localeCompare(b.name)).map(x=>[esc(x.name),esc(Number(x.current_stock||0).toFixed(3)),esc(x.unit)]));
+ $("fifo-consume-form").onsubmit=async e=>{
+  e.preventDefault();
+  const btn=$("fifo-consume-btn"),msg=$("fifo-msg");
+  btn.disabled=true;btn.textContent="FIFO stock कमी होत आहे…";msg.classList.add("hidden");
+  try{
+   const rawRef=$("fifo-ref-id").value.trim();
+   if(rawRef&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawRef))throw Error("Reference ID UUID format मध्ये द्या किंवा रिकामे ठेवा.");
+   const {data,error}=await db.rpc("tec_consume_product_fifo",{p_product_id:$("fifo-product").value,p_quantity:Number($("fifo-qty").value),p_reference_type:$("fifo-ref-type").value,p_reference_id:rawRef||null,p_reason:$("fifo-reason").value.trim()||null});
+   if(error)throw error;
+   await page("stock");
+   message($("fifo-msg"),"FIFO stock वापर नोंदवला. "+(data?.batches_used||0)+" batch मधून stock कमी केला.","ok");
+  }catch(err){message(msg,"Stock कमी झाला नाही: "+err.message,"error");}
+  finally{btn.disabled=false;btn.textContent="FIFO ने stock कमी करा";}
+ };
+}
  else if(which==="notifications"){
  const data=await rows("app_notifications","id,recipient_user_id,title,message,notification_type,read_at,created_at");
  root.innerHTML=header("INBOX","Notifications","तुमच्यासाठी असलेल्या सूचना")+
