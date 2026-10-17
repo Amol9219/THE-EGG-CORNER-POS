@@ -141,19 +141,18 @@ td{color:#344b40}
  if(profile.role==="outlet"){
   const outletId=profile.outlet_id;
   if(!outletId)throw Error("या Outlet login ला outlet जोडलेला नाही. Owner कडून profile तपासून घ्या.");
-  const [orderResult,billResult,priceResult]=await Promise.all([
-   db.from("outlet_orders").select("id,status,total_amount,created_at,delivery_status,payment_status").eq("outlet_id",outletId).order("created_at",{ascending:false}).limit(100),
-   db.from("bills").select("id,total_amount,paid_amount,balance_amount,payment_status,created_at").eq("outlet_id",outletId).order("created_at",{ascending:false}).limit(100),
-   db.from("outlet_prices").select("id").eq("outlet_id",outletId).eq("is_active",true)
+  const [orderResult,billResult]=await Promise.all([
+   db.from("outlet_orders").select("id,status,goods_total,delivery_charge,created_at,delivered_at,received_confirmed_at").eq("outlet_id",outletId).order("created_at",{ascending:false}).limit(100),
+   db.from("bills").select("id,grand_total,paid_total,status,issued_at,created_at").eq("outlet_id",outletId).order("created_at",{ascending:false}).limit(100)
   ]);
-  if(orderResult.error)throw orderResult.error;if(billResult.error)throw billResult.error;if(priceResult.error)throw priceResult.error;
+  if(orderResult.error)throw orderResult.error;if(billResult.error)throw billResult.error;
   const ownOrders=orderResult.data||[],ownBills=billResult.data||[];
-  const balance=ownBills.reduce((sum,b)=>sum+Math.max(0,Number(b.balance_amount??(Number(b.total_amount||0)-Number(b.paid_amount||0))??0)),0);
-  const deliveries=ownOrders.filter(o=>/pending|dispatch|transit|deliver/i.test(String(o.delivery_status||o.status||""))).length;
+  const balance=ownBills.filter(b=>b.status!=="cancelled").reduce((sum,b)=>sum+Math.max(0,Number(b.grand_total||0)-Number(b.paid_total||0)),0);
+  const deliveries=ownOrders.filter(o=>!o.delivered_at&&!o.received_confirmed_at&&["confirmed","dispatched"].includes(String(o.status||"").toLowerCase())).length;
   root.innerHTML=header("OUTLET OVERVIEW","नमस्कार, "+esc(profile.full_name||"Outlet"),"तुमच्या Outlet चे मसाला खरेदी orders, bills आणि payments")+
    '<div class="grid">'+linkedCard("shopping-cart","My Orders",ownOrders.length,"तुमच्या order नोंदी","orders")+linkedCard("truck","Delivery Status",deliveries,"प्रलंबित / चालू delivery","orders")+linkedCard("receipt","My Bills",ownBills.length,"तुमच्या bill नोंदी","bills")+linkedCard("banknote","Outstanding Balance","₹"+balance.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2}),"तुमच्या bills वरील बाकी","bills")+'</div>'+
    '<div class="section"><h2>तुमच्या अलीकडील Orders</h2><span class="muted">फक्त तुमच्या Outlet साठी</span></div>'+
-   table(["Order date","Order ID","Status","Delivery","Payment"],ownOrders.slice(0,5).map(o=>[o.created_at?new Date(o.created_at).toLocaleDateString("en-IN"):"—",esc(String(o.id).slice(0,8)),esc(o.status||"—"),esc(o.delivery_status||"—"),esc(o.payment_status||"—")]))+
+   table(["Order date","Order ID","Status","Delivery","Payment"],ownOrders.slice(0,5).map(o=>[o.created_at?new Date(o.created_at).toLocaleDateString("en-IN"):"—",esc(String(o.id).slice(0,8)),esc(o.status||"—"),esc(o.delivered_at?"Delivered":o.status==="dispatched"?"Dispatched":o.status==="confirmed"?"Confirmed":"—"),esc(o.status==="cancelled"?"Cancelled":ownBills.some(b=>b.outlet_order_id===o.id)?"Billed":"—")]))+
    '<div class="notice">या खात्यात फक्त तुमच्या Outlet ची माहिती दिसली पाहिजे. Products, Suppliers, इतर Outlets आणि एकूण business counts येथे दाखवले जात नाहीत.</div>';
  }else{
   const [p,r,o,s,orders,bills]=await Promise.all([count("products"),profile.role==="owner"?count("raw_materials"):Promise.resolve("—"),count("outlets"),profile.role==="owner"?count("suppliers"):Promise.resolve("—"),count("outlet_orders"),count("bills")]);
