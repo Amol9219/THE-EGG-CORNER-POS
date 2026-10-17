@@ -131,6 +131,7 @@ td{color:#344b40}
  const priceForm=$("price-form");
  if(priceForm)priceForm.onsubmit=async e=>{e.preventDefault();const form=e.target,btn=form.querySelector("button");btn.disabled=true;const f=new FormData(form),outletId=String(f.get("outlet_id")),productId=String(f.get("product_id")),price=Number(f.get("selling_price"));if(!Number.isFinite(price)||price<0){message($("price-msg"),"दर 0 किंवा त्यापेक्षा जास्त असावा.","error");btn.disabled=false;return}try{const exists=await db.from("outlet_prices").select("id").eq("outlet_id",outletId).eq("product_id",productId).eq("is_active",true).limit(2);if(exists.error)throw exists.error;if((exists.data||[]).length>1)throw Error("या outlet-product साठी duplicate active दर आहेत. आधी ते तपासणे आवश्यक आहे.");let result;if(exists.data?.length)result=await db.from("outlet_prices").update({selling_price:price,is_active:true}).eq("id",exists.data[0].id);else result=await db.from("outlet_prices").insert({outlet_id:outletId,product_id:productId,selling_price:price,is_active:true});if(result.error)throw result.error;message($("price-msg"),"Outlet price जतन झाला.","ok");page("products")}catch(err){message($("price-msg"),"दर जतन झाला नाही: "+err.message,"error");btn.disabled=false}};
  }
+ }
 
  else if(which==="suppliers"){
  if(!allowed(["owner"]))throw Error("Owner permission आवश्यक आहे.");
