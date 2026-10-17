@@ -123,7 +123,7 @@ td{color:#344b40}
   ]);
   if(orderResult.error)throw orderResult.error;if(billResult.error)throw billResult.error;if(priceResult.error)throw priceResult.error;
   const ownOrders=orderResult.data||[],ownBills=billResult.data||[];
-  const balance=ownBills.reduce((sum,b)=>sum+Math.max(0,Number(b.balance_amount??(Number(b.total_amount||0)-Number(b.paid_amount||0))||0)),0);
+  const balance=ownBills.reduce((sum,b)=>sum+Math.max(0,Number(b.balance_amount??(Number(b.total_amount||0)-Number(b.paid_amount||0))??0)),0);
   const deliveries=ownOrders.filter(o=>/pending|dispatch|transit|deliver/i.test(String(o.delivery_status||o.status||""))).length;
   root.innerHTML=header("OUTLET OVERVIEW","नमस्कार, "+esc(profile.full_name||"Outlet"),"तुमच्या Outlet चे orders, deliveries आणि payments")+
    '<div class="grid">'+linkedCard("shopping-cart","My Orders",ownOrders.length,"तुमच्या order नोंदी","orders")+linkedCard("truck","Delivery Status",deliveries,"प्रलंबित / चालू delivery","orders")+linkedCard("receipt","My Bills",ownBills.length,"तुमच्या bill नोंदी","bills")+linkedCard("banknote","Outstanding Balance","₹"+balance.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2}),"तुमच्या bills वरील बाकी","bills")+'</div>'+
