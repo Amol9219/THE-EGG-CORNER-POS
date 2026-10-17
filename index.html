@@ -64,7 +64,7 @@ td{color:#344b40}
 <div class="muted" style="margin-top:auto;padding:14px 8px;border-top:1px solid var(--line)">TEC Masala Business · Foundation</div></aside><main id="main"><div class="muted">Loading…</div></main></div></div>
 <div id="invoice-preview" class="hidden"></div><script>
 (()=> {
- if(!window.supabase||typeof window.supabase.createClient!=="function"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("login-message");if(m){m.textContent="लॉगिन सेवा लोड झाली नाही. इंटरनेट तपासा किंवा पान पुन्हा उघडा.";m.className="notice error"}});return;}
+ if(!window.supabase||typeof window.supabase.createClient!=="function"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("login-message"),f=document.getElementById("login-form"),b=document.getElementById("login-submit");if(m){m.textContent="लॉगिन सेवा लोड झाली नाही. इंटरनेट तपासा किंवा पान पुन्हा उघडा.";m.className="notice error"}if(f){f.addEventListener("submit",e=>{e.preventDefault();if(m){m.textContent="लॉगिन सेवा लोड झाली नाही. पान पुन्हा उघडा किंवा इंटरनेट तपासा.";m.className="notice error"}if(b){b.disabled=false;b.textContent="लॉगिन करा"}})}});return;}
 
  const URL="https://isypmwpmqqcopgcmenqz.supabase.co", KEY="sb_publishable_aTL-fgjwDQ-JBnywzR0KEg_ONWEjEAw";
  const db=window.supabase.createClient(URL,KEY),$=id=>document.getElementById(id);
