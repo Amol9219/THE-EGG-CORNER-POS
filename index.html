@@ -193,25 +193,32 @@ td{color:#344b40}
   const oid=outletSelect.value;
   if(!oid){list.innerHTML='<p class="muted">मसाल्यांची यादी पाहण्यासाठी Outlet निवडा.</p>';return}
   const activePrices=priceData.filter(p=>p.outlet_id===oid&&p.is_active);
-  list.innerHTML=table(["Product / मसाला","Unit","Selling price (₹)","Action"],priceProducts.filter(p=>p.is_active).map(p=>{
+  list.innerHTML=table(["Product / मसाला","Unit","Selling price (₹)","Status"],priceProducts.filter(p=>p.is_active).map(p=>{
    const matches=activePrices.filter(v=>v.product_id===p.id);
    const current=matches.length?matches[matches.length-1]:null;
-   return [esc(p.name+(p.pack_size?" · "+p.pack_size:"")),esc(p.unit||"—"),'<input aria-label="'+esc(p.name)+' selling price" type="number" min="0" step="0.01" data-price-input="'+esc(p.id)+'" value="'+(current?esc(String(current.selling_price)):"")+'" placeholder="दर टाका" style="max-width:150px">','<button class="btn primary" type="button" data-price-save="'+esc(p.id)+'">'+(current?"दर Edit / जतन":"दर जतन करा")+'</button>'];
-  }));
-  list.querySelectorAll("[data-price-save]").forEach(btn=>btn.onclick=async()=>{
-   const pid=btn.dataset.priceSave, input=list.querySelector('[data-price-input="'+pid+'"]'), raw=input?.value.trim();
-   if(raw===""){message($("price-msg"),"दर टाका; दर रिकामा ठेवल्यास तो जतन होणार नाही.","error");return}
-   const amount=Number(raw);if(!Number.isFinite(amount)||amount<0){message($("price-msg"),"दर 0 किंवा त्यापेक्षा जास्त असावा.","error");return}
-   btn.disabled=true;
-   try{
-    const existing=priceData.filter(p=>p.outlet_id===oid&&p.product_id===pid).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+   return [esc(p.name+(p.pack_size?" · "+p.pack_size:"")),esc(p.unit||"—"),'<input aria-label="'+esc(p.name)+' selling price" type="number" min="0" step="0.01" data-price-input="'+esc(p.id)+'" value="'+(current?esc(String(current.selling_price)):"")+'" placeholder="दर टाका" style="max-width:150px">',current?"आधीचा दर":"नवीन दर"];
+  }))+'<div style="padding:12px 0"><button id="save-all-outlet-prices" class="btn primary" type="button">सर्व दर जतन करा</button><p class="muted">रिकामे ठेवलेले दर या वेळी जतन होणार नाहीत.</p></div>';
+  const saveAll=$("save-all-outlet-prices");
+  saveAll.onclick=async()=>{
+   const inputs=[...list.querySelectorAll("[data-price-input]")];
+   const entries=inputs.map(input=>({productId:input.dataset.priceInput,raw:input.value.trim(),input})).filter(x=>x.raw!=="");
+   if(!entries.length){message($("price-msg"),"किमान एका मसाल्याचा दर भरा.","error");return}
+   const invalid=entries.find(x=>!Number.isFinite(Number(x.raw))||Number(x.raw)<0);
+   if(invalid){message($("price-msg"),"सर्व भरलेले दर 0 किंवा त्यापेक्षा जास्त असावेत.","error");invalid.input.focus();return}
+   saveAll.disabled=true;saveAll.textContent="दर जतन होत आहेत...";
+   let saved=0;const errors=[];
+   for(const entry of entries){
+    const amount=Number(entry.raw);
+    const existing=priceData.filter(p=>p.outlet_id===oid&&p.product_id===entry.productId).sort((x,y)=>new Date(y.created_at||0)-new Date(x.created_at||0));
     let result;
     if(existing.length)result=await db.from("outlet_prices").update({selling_price:amount,is_active:true,updated_at:new Date().toISOString()}).eq("id",existing[0].id);
-    else result=await db.from("outlet_prices").insert({outlet_id:oid,product_id:pid,selling_price:amount,is_active:true});
-    if(result.error)throw result.error;
-    message($("price-msg"),"दर जतन झाला.","ok");await page("products");
-   }catch(err){message($("price-msg"),"दर जतन झाला नाही: "+err.message,"error");btn.disabled=false}
-  });
+    else result=await db.from("outlet_prices").insert({outlet_id:oid,product_id:entry.productId,selling_price:amount,is_active:true});
+    if(result.error)errors.push((priceProducts.find(p=>p.id===entry.productId)?.name||"Product")+": "+result.error.message);
+    else saved++;
+   }
+   if(errors.length){message($("price-msg"),saved+" दर जतन झाले; काही दर जतन झाले नाहीत: "+errors.join(" | "),"error");saveAll.disabled=false;saveAll.textContent="पुन्हा जतन करा";return}
+   message($("price-msg"),saved+" मसाल्यांचे दर एकाच वेळी जतन झाले.","ok");await page("products");
+  };
  };
  outletSelect.onchange=()=>{const msg=$("price-msg");if(msg)msg.classList.add("hidden");renderOutletPrices()};
  }
