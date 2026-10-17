@@ -193,11 +193,12 @@ td{color:#344b40}
   const oid=outletSelect.value;
   if(!oid){list.innerHTML='<p class="muted">मसाल्यांची यादी पाहण्यासाठी Outlet निवडा.</p>';return}
   const activePrices=priceData.filter(p=>p.outlet_id===oid&&p.is_active);
-  list.innerHTML=table(["Product / मसाला","Unit","Selling price (₹)","Status"],priceProducts.filter(p=>p.is_active).map(p=>{
+  list.innerHTML=table(["Product / मसाला","Unit","Selling price (₹)","Action"],priceProducts.filter(p=>p.is_active).map(p=>{
    const matches=activePrices.filter(v=>v.product_id===p.id);
    const current=matches.length?matches[matches.length-1]:null;
-   return [esc(p.name+(p.pack_size?" · "+p.pack_size:"")),esc(p.unit||"—"),'<input aria-label="'+esc(p.name)+' selling price" type="number" min="0" step="0.01" data-price-input="'+esc(p.id)+'" value="'+(current?esc(String(current.selling_price)):"")+'" placeholder="दर टाका" style="max-width:150px">',current?"आधीचा दर":"नवीन दर"];
+   return [esc(p.name+(p.pack_size?" · "+p.pack_size:"")),esc(p.unit||"—"),'<input aria-label="'+esc(p.name)+' selling price" type="number" min="0" step="0.01" data-price-input="'+esc(p.id)+'" value="'+(current?esc(String(current.selling_price)):"")+'" placeholder="दर टाका" style="max-width:150px">','<button class="btn ghost" type="button" data-price-edit-focus="'+esc(p.id)+'">'+(current?"Edit":"दर भरा")+"</button>"];
   }))+'<div style="padding:12px 0"><button id="save-all-outlet-prices" class="btn primary" type="button">सर्व दर जतन करा</button><p class="muted">रिकामे ठेवलेले दर या वेळी जतन होणार नाहीत.</p></div>';
+  list.querySelectorAll("[data-price-edit-focus]").forEach(btn=>btn.onclick=()=>{const input=list.querySelector('[data-price-input="'+btn.dataset.priceEditFocus+'"]');if(input){input.focus();input.select();message($("price-msg"),"दर बदला/टाका आणि शेवटी “सर्व दर जतन करा” दाबा.","ok")}});
   const saveAll=$("save-all-outlet-prices");
   saveAll.onclick=async()=>{
    const inputs=[...list.querySelectorAll("[data-price-input]")];
