@@ -85,21 +85,14 @@ Outlet accounts can submit orders only for their assigned outlet and create retu
 
 ## Security follow-up
 
-- Supabase's Security Advisor reported that **Leaked Password Protection is disabled**. Enable it in Authentication → Settings → Password Security.
-- Keep the publishable key in client code only; never use a `service_role` or secret key in the browser.
-- Most transaction workflow functions use `SECURITY INVOKER`, validate roles/state, and restrict anonymous execution. Two narrow submission RPCs (`tec_create_outlet_order` and `tec_create_return_request`) intentionally use `SECURITY DEFINER` with an empty/locked `search_path` and explicit Auth role/outlet/bill checks. Direct `INSERT` privileges on the related order/return tables are revoked for `authenticated` so validated RPCs are the submission path. Supabase Security Advisor still reports a generic signed-in-`SECURITY DEFINER` warning for these two endpoints; they need continued review and end-to-end tests before Production use. Row-level security remains enabled on the application tables.
+- **Applied hardening (target project `isypmwpmqqcopgcmenqz`):** migration `20261018210657_harden_privileged_rpc_access` now denies anonymous execution of `tec_main_kitchen_financial_summary`, `tec_outlet_food_financial_summary`, `tec_owner_manufacturing_profit_summary`, and `tec_record_product_stock_out`. Sensitive routines now explicitly reject missing/unknown roles; the Main Kitchen financial summary is Owner-only to keep confidential ledger data away from co-owner/outlet roles.
+- The legacy three-argument `tec_restaurant_record_payment(uuid,numeric,text)` overload has been disabled. The current app uses the five-argument version to collect customer name/mobile when recording credit bills.
+- The latest Security Advisor check no longer reports anonymous `SECURITY DEFINER` function access. It still reports 14 authenticated-callable `SECURITY DEFINER` routines that need individual authorization review, plus **Leaked Password Protection is disabled**. Enable leaked-password protection in Authentication → Settings → Password Security.
+- Keep the publishable key in client code only; never use a `service_role` or secret key in the browser. RLS remains enabled on the public application tables.
+- This security change was validated by checking PostgreSQL function privileges after applying the migration. Full signed-in browser testing of the app's order, bill and payment workflows is still outstanding; do not treat the app as fully production-ready.
 
 ## Database migration files
 
-The feature branch tracks the applied workflow migrations in `supabase/migrations/`, including:
-
-- `tec_masala_business_foundation`
-- `tec_procurement_receipt_workflows`
-- `tec_purchase_order_transitions`
-- `tec_order_billing_payment_workflows`
-- `tec_production_recipes_and_completion`
-- `tec_returns_review_and_restock`
-- Production costing, return-input and receipt/product-status guard migrations
-- `tec_business_settings`
-
-Keep the migration files in version control alongside the app. Changes to database functions should be reviewed and tested before the Production release.
+- Keep migration files in version control alongside the app. The hardening migration is tracked as `supabase/migrations/20261018210657_harden_privileged_rpc_access.sql`, matching the applied target-database migration version.
+- **Migration-history drift remains:** the target database has additional applied migrations for FIFO inventory, financial reporting, transfers and restaurant billing that are not all present in this branch's `supabase/migrations/` directory. Reconcile and commit the missing migration SQL before relying on a fresh database setup or automated rebuild.
+- Review and test database function changes before any Production release. The feature branch's Vercel Preview has not been promoted to the stable Production alias.
