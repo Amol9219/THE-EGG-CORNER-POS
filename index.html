@@ -118,7 +118,7 @@ td{color:#344b40}
  document.querySelectorAll("[data-icon]").forEach(el=>{el.innerHTML=svgIcon(el.dataset.icon)});
  const allowed=roles=>roles.includes(profile?.role);
  // Role-based UI scope: owner sees every module; co-owner sees finished-masala sales operations; outlet sees only its own buying documents.
- const rolePages={owner:null,production_owner:["dashboard","notifications","raw","stock","production","products","suppliers","users","account","about"],co_owner:["dashboard","notifications","products","orders","returns","bills","reports","outlets","account","about"],outlet:["dashboard","notifications","orders","account","about","restaurant-billing"]};
+ const rolePages={owner:null,production_owner:["dashboard","notifications","raw","production","products","account","about"],co_owner:["dashboard","notifications","products","orders","returns","bills","reports","outlets","account","about"],outlet:["dashboard","notifications","orders","account","about","restaurant-billing"]};
  const canOpenPage=which=>profile?.role==="owner"||(rolePages[profile?.role]||[]).includes(which);
  const canShowNav=which=>canOpenPage(which)&&!(profile?.role==="owner"&&which==="restaurant-billing");
  const message=(el,text,cls="")=>{el.textContent=text;el.className="notice "+cls;el.classList.remove("hidden")};
