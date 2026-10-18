@@ -78,6 +78,7 @@ Outlet accounts can submit orders only for their assigned outlet and create retu
 - GST/tax calculation, tax invoice compliance and statutory validation are not implemented. GSTIN is currently stored/displayed as business information only.
 - Supplier payments/advances/refunds are recorded in the payment ledger, but full supplier-invoice matching and accounts-payable reconciliation are not implemented.
 - Return inspection currently supports whole-request approval/rejection; line-wise partial acceptance is not implemented.
+- **Restaurant menu setup is incomplete in the current data:** the live database has 33 menu items for `hawkers` only; the active outlet login is assigned to `hinjewadi`, which currently has no menu items. Configure and verify each outlet's actual menu/prices before billing tests or live use; do not copy prices blindly between outlets.
 - Reports use the latest up to 100 bills and up to 100 orders, without complete accounting-period filters or export.
 - Audit logging is not yet wired into every action. The Activity Log is not a complete, immutable system-wide audit record.
 - Automated backup/restore, retention procedures, monitoring/alerting, independent two-person approvals and comprehensive end-to-end tests still need to be finished.
