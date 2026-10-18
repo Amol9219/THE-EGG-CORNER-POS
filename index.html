@@ -663,7 +663,7 @@ else if(which==="production"){
  $("production-form").onsubmit=async e=>{e.preventDefault();const form=e.target,btn=form.querySelector('button[type="submit"]');btn.disabled=true;const f=new FormData(form),producedAt=new Date(String(f.get("produced_on"))).toISOString();const qty=Number(f.get("produced_qty")),planned=Number(f.get("planned_qty"));if(!Number.isFinite(qty)||qty<=0||!Number.isFinite(planned)||planned<=0){message($("production-msg"),"Planned आणि actual quantity 0 पेक्षा जास्त असावी.","error");btn.disabled=false;return}const payload={p_recipe_id:String(f.get("recipe_id")),p_batch_code:String(f.get("batch_code")||"").trim()||null,p_planned_qty:planned,p_produced_qty:qty,p_produced_on:producedAt,p_expires_on:String(f.get("expires_on")||"")||null,p_notes:String(f.get("notes")||"").trim()||null};const {data,error}=await db.rpc("tec_complete_production",payload);if(error){message($("production-msg"),"Production पूर्ण झाले नाही: "+error.message,"error");btn.disabled=false;return}await page("production");message($("production-msg"),"Production "+data.batch_code+" पूर्ण झाले. "+data.produced_qty+" "+data.unit+" stock मध्ये जोडले.","ok")};
 }
 else if(which==="restaurant-billing"){
- if(!allowed(["owner","co_owner","outlet"]))throw Error("Restaurant Billing साठी Owner, Partnership किंवा Outlet permission आवश्यक आहे.");
+ if(!allowed(["outlet"]))throw Error("Restaurant Billing फक्त संबंधित Outlet login मधून वापरता येईल.");
  const [outlets,menu,waiters,orders,orderItems,bills,payments]=await Promise.all([
   rows("outlets","id,name,is_active"),rows("restaurant_menu_items","*"),rows("restaurant_waiters","*"),
   rows("restaurant_orders","*"),rows("restaurant_order_items","*"),rows("restaurant_bills","*"),rows("restaurant_bill_payments","*")
