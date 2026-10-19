@@ -23,13 +23,48 @@ Deno.serve(async (req: Request) => {
     const { data: authData, error: authError } = await caller.auth.getUser(token);
     if (authError || !authData.user) return new Response(JSON.stringify({ error: "Session invalid. Please log in again." }), { status: 401, headers: cors });
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data: owner, error: ownerError } = await admin.from("profiles").select("id,role,is_active").eq("id", authData.user.id).maybeSingle();
-    if (ownerError || !owner || owner.role !== "owner" || owner.is_active !== true) {
-      return new Response(JSON.stringify({ error: "Only an active Owner can invite team members." }), { status: 403, headers: cors });
-    }
+    const { data: owner, error: ownerError } = await admin.from("profiles").select("id,role,is_active,outlet_id").eq("id", authData.user.id).maybeSingle();
+    if (ownerError || !owner || owner.is_active !== true) return new Response(JSON.stringify({ error: "Active account required." }), { status: 403, headers: cors });
     const body = await req.json();
     const action = String(body.action || "invite");
     const redirectTo = "https://tec-masala-business.vercel.app/";
+    if (action === "create_restaurant_staff") {
+      if (owner.role !== "outlet" || !owner.outlet_id) return new Response(JSON.stringify({ error: "Only an active Outlet account can create its own staff logins." }), { status: 403, headers: cors });
+      const email = String(body.email || "").trim().toLowerCase();
+      const full_name = String(body.full_name || "").trim();
+      const mobile = String(body.mobile || "").trim() || null;
+      const staff_role = String(body.staff_role || "");
+      const password = String(body.password || "");
+      const waiter_code = String(body.waiter_code || "").trim() || null;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error("Valid email address required.");
+      if (!full_name || full_name.length > 120 || (mobile && mobile.length > 30)) throw new Error("Valid staff name and mobile are required.");
+      if (!["waiter", "kitchen", "counter"].includes(staff_role)) throw new Error("Choose Waiter, Kitchen, or Counter role.");
+      if (password.length < 8 || password.length > 128) throw new Error("Password must be 8 to 128 characters.");
+      const { data: outlet, error: outletError } = await admin.from("outlets").select("id,is_active").eq("id", owner.outlet_id).maybeSingle();
+      if (outletError || !outlet || outlet.is_active !== true) throw new Error("This outlet is inactive or unavailable.");
+      const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } });
+      if (createError || !created.user) throw new Error(createError?.message || "Could not create staff login.");
+      const userId = created.user.id;
+      const { error: profileError } = await admin.from("profiles").insert({ id: userId, full_name, mobile, role: "outlet", staff_role, outlet_id: owner.outlet_id, is_active: true });
+      if (profileError) {
+        await admin.auth.admin.deleteUser(userId);
+        throw new Error("Staff profile creation failed: " + profileError.message);
+      }
+      if (staff_role === "waiter") {
+        const { error: waiterError } = await admin.from("restaurant_waiters").insert({ outlet_id: owner.outlet_id, waiter_name: full_name, waiter_code, created_by: authData.user.id, user_id: userId });
+        if (waiterError) {
+          await admin.from("profiles").delete().eq("id", userId);
+          await admin.auth.admin.deleteUser(userId);
+          throw new Error("Waiter setup failed: " + waiterError.message);
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, email, staff_role }), { status: 200, headers: cors });
+    }
+    if (action === "reset_password" || action === "update_login_email") {
+      if (owner.role !== "owner") return new Response(JSON.stringify({ error: "Only the main Owner can manage all login credentials." }), { status: 403, headers: cors });
+    }
+    if (action === "create_outlet_user" && !["owner", "co_owner"].includes(owner.role)) return new Response(JSON.stringify({ error: "Only Owner or Partnership can create outlet logins." }), { status: 403, headers: cors });
+    if (action === "invite" && !["owner", "co_owner"].includes(owner.role)) return new Response(JSON.stringify({ error: "Only Owner or Partnership can invite users." }), { status: 403, headers: cors });
     if (action === "reset_password") {
       const userId = String(body.user_id || "").trim();
       if (!userId) throw new Error("User ID required.");
@@ -53,7 +88,7 @@ Deno.serve(async (req: Request) => {
       if (updateAuthError) throw new Error(updateAuthError.message);
       return new Response(JSON.stringify({ ok: true, email: nextEmail, message: "Login email change request स्वीकारली. Auth settings नुसार नवीन email confirm करावा लागू शकतो." }), { status: 200, headers: cors });
     }
-    if (action !== "invite") throw new Error("Unsupported action.");
+    if (action !== "invite" && action !== "create_outlet_user") throw new Error("Unsupported action.");
     const email = String(body.email || "").trim().toLowerCase();
     const full_name = String(body.full_name || "").trim();
     const mobile = String(body.mobile || "").trim() || null;
@@ -63,12 +98,26 @@ Deno.serve(async (req: Request) => {
     if (!full_name || full_name.length > 120) throw new Error("Name is required (max 120 characters).");
     if (mobile && mobile.length > 30) throw new Error("Mobile number is too long.");
     if (!["outlet", "co_owner", "owner"].includes(role)) throw new Error("Invalid role.");
+    if (owner.role === "co_owner" && role !== "outlet") throw new Error("Partnership accounts can create Outlet users only.");
+    if (action === "create_outlet_user" && role !== "outlet") throw new Error("This action only creates Outlet users.");
     if (role === "outlet") {
       if (!outlet_id) throw new Error("Choose an outlet for Outlet users.");
       const { data: outlet, error: outletError } = await admin.from("outlets").select("id,is_active").eq("id", outlet_id).maybeSingle();
       if (outletError || !outlet || outlet.is_active !== true) throw new Error("Selected outlet is missing or inactive.");
     }
     if (role !== "outlet" && outlet_id) throw new Error("Only Outlet users can be assigned to an outlet.");
+    if (action === "create_outlet_user") {
+      const password = String(body.password || "");
+      if (password.length < 8 || password.length > 128) throw new Error("Password must be 8 to 128 characters.");
+      const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } });
+      if (createError || !created.user) throw new Error(createError?.message || "Could not create Outlet login.");
+      const { error: profileError } = await admin.from("profiles").insert({ id: created.user.id, full_name, mobile, role: "outlet", outlet_id, is_active: true });
+      if (profileError) {
+        await admin.auth.admin.deleteUser(created.user.id);
+        throw new Error("Outlet profile creation failed: " + profileError.message);
+      }
+      return new Response(JSON.stringify({ ok: true, email, message: "Outlet login created." }), { status: 200, headers: cors });
+    }
     const { data: invite, error: inviteError } = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo, data: { full_name } } });
     if (inviteError || !invite?.user?.id || !invite?.properties?.action_link) throw new Error(inviteError?.message || "Could not generate invite link. Check Auth settings and whether this email already exists.");
     const { error: profileError } = await admin.from("profiles").insert({ id: invite.user.id, full_name, mobile, role, outlet_id: role === "outlet" ? outlet_id : null, is_active: true });
