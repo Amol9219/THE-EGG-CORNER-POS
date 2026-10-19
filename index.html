@@ -118,7 +118,7 @@ td{color:#344b40}
  document.querySelectorAll("[data-icon]").forEach(el=>{el.innerHTML=svgIcon(el.dataset.icon)});
  const allowed=roles=>roles.includes(profile?.role);
  // Role-based UI scope: owner sees every module; co-owner sees finished-masala sales operations; outlet sees only its own buying documents.
- const rolePages={owner:["dashboard","notifications","stock","raw","production","suppliers","expenses","users","account","about","settings"],production_owner:["dashboard","notifications","account","about"],co_owner:["dashboard","notifications","products","orders","returns","bills","reports","outlets","main-kitchen","account","about"],outlet:["dashboard","notifications","orders","account","about","restaurant-billing","outlet-finance"],waiter:["notifications","account","about","restaurant-billing"],kitchen:["notifications","account","about","restaurant-billing"],counter:["notifications","account","about","restaurant-billing"]};
+ const rolePages={owner:["dashboard","notifications","stock","raw","production","main-kitchen","suppliers","expenses","users","account","about","settings"],production_owner:["dashboard","notifications","account","about"],co_owner:["dashboard","notifications","products","orders","returns","bills","reports","outlets","main-kitchen","account","about"],outlet:["dashboard","notifications","orders","account","about","restaurant-billing","outlet-finance"],waiter:["notifications","account","about","restaurant-billing"],kitchen:["notifications","account","about","restaurant-billing"],counter:["notifications","account","about","restaurant-billing"]};
  const canOpenPage=which=>(rolePages[profile?.role]||[]).includes(which);
  const canShowNav=which=>canOpenPage(which);
  const message=(el,text,cls="")=>{el.textContent=text;el.className="notice "+cls;el.classList.remove("hidden")};
@@ -289,7 +289,7 @@ td{color:#344b40}
 }
 
  else if(which==="outlets"){
- if(!allowed(["co_owner"]))throw Error("Partnership permission आवश्यक आहे.");
+ if(!allowed(["owner","co_owner"]))throw Error("Owner किंवा Partnership permission आवश्यक आहे.");
  const [data,people]=await Promise.all([rows("outlets","id,name,code,mobile,address,is_active"),rows("profiles","id,full_name,mobile,role,outlet_id,is_active")]);
  const outletPeople=Object.fromEntries(data.map(x=>[x.id,people.filter(p=>p.role==="outlet"&&p.outlet_id===x.id)]));
   root.innerHTML=header("NETWORK","Outlets","Partnership Outlet ला मसाला पुरवते; Outlet तो Restaurant Billing मध्ये वापरते.")+
