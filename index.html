@@ -289,7 +289,7 @@ td{color:#344b40}
 }
 
  else if(which==="outlets"){
- if(!allowed(["owner","co_owner"]))throw Error("Owner किंवा Partnership permission आवश्यक आहे.");
+ if(!allowed(["co_owner"]))throw Error("Partnership permission आवश्यक आहे.");
  const [data,people]=await Promise.all([rows("outlets","id,name,code,mobile,address,is_active"),rows("profiles","id,full_name,mobile,role,outlet_id,is_active")]);
  const outletPeople=Object.fromEntries(data.map(x=>[x.id,people.filter(p=>p.role==="outlet"&&p.outlet_id===x.id)]));
   root.innerHTML=header("NETWORK","Outlets","Partnership Outlet ला मसाला पुरवते; Outlet तो Restaurant Billing मध्ये वापरते.")+
@@ -615,7 +615,7 @@ else if(which==="outlet-finance"){
  $("outlet-expense-form").onsubmit=async e=>{e.preventDefault();const form=e.target,btn=form.querySelector('button[type="submit"]'),fd=new FormData(form),row={outlet_id:String(fd.get("outlet_id")||""),expense_date:String(fd.get("expense_date")||today),category:String(fd.get("category")||"other"),amount:Number(fd.get("amount")),paid_to:String(fd.get("paid_to")||"").trim()||null,notes:String(fd.get("notes")||"").trim()||null,created_by:user.id};if(!row.outlet_id||!Number.isFinite(row.amount)||row.amount<=0){message($("outlet-expense-msg"),"Outlet आणि योग्य खर्च रक्कम भरा.","error");return}btn.disabled=true;try{const {error}=await db.from("outlet_business_expenses").insert(row);if(error)throw error;await page("outlet-finance")}catch(err){message($("outlet-expense-msg"),"खर्च जतन झाला नाही: "+err.message,"error");btn.disabled=false}};
 }
 else if(which==="main-kitchen"){
-  if(!allowed(["co_owner"]))throw Error("Partnership permission आवश्यक आहे.");
+  if(!allowed(["owner","co_owner"]))throw Error("Owner किंवा Partnership permission आवश्यक आहे.");
  const [products,transferData,expenseData,summaryRes,ownerProfitRes,transferPrices]=await Promise.all([
   profile.role==="owner"?rows("products","id,name,unit,pack_size,is_active,current_stock"):rows("products","id,name,unit,pack_size,is_active"),
   rows("main_kitchen_transfers","id,transfer_number,transfer_date,product_id,product_name_snapshot,quantity,available_quantity,unit,unit_price,total_amount,notes,status,created_at"),
