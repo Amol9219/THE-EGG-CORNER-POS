@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
     if (ownerError || !owner || owner.is_active !== true) return new Response(JSON.stringify({ error: "Active account required." }), { status: 403, headers: cors });
     const body = await req.json();
     const action = String(body.action || "invite");
-    const redirectTo = "https://tec-masala-business.vercel.app/";
+    const redirectTo = "https://tec-masala-business.vercel.app/?auth_action=password";
     if (action === "create_restaurant_staff") {
       if (owner.role !== "outlet" || !owner.outlet_id) return new Response(JSON.stringify({ error: "Only an active Outlet account can create its own staff logins." }), { status: 403, headers: cors });
       const email = String(body.email || "").trim().toLowerCase();
