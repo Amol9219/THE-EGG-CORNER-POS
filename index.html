@@ -619,7 +619,7 @@ else if(which==="main-kitchen"){
  const [products,transferData,expenseData,summaryRes,ownerProfitRes,transferPrices]=await Promise.all([
   profile.role==="owner"?rows("products","id,name,unit,pack_size,is_active,current_stock"):rows("products","id,name,unit,pack_size,is_active"),
   rows("main_kitchen_transfers","id,transfer_number,transfer_date,product_id,product_name_snapshot,quantity,available_quantity,unit,unit_price,total_amount,notes,status,created_at"),
-  profile.role==="production_owner"?Promise.resolve([]):rows("main_kitchen_expenses","id,expense_date,category,amount,paid_to,notes,created_at"),
+  profile.role==="co_owner"?rows("main_kitchen_expenses","id,expense_date,category,amount,paid_to,notes,created_at"):Promise.resolve([]),
   profile.role==="co_owner"?db.rpc("tec_partnership_financial_summary"):Promise.resolve({data:{},error:null}),
   Promise.resolve({data:null,error:null}),
   rows("production_transfer_prices","id,product_id,transfer_price,effective_at,created_at")
