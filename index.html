@@ -154,7 +154,8 @@ td{color:#344b40}
  const activeProducts=products.filter(p=>p.is_active);
  const activeRaw=rawItems.filter(r=>r.is_active);
  const norm=v=>String(v||"").toLowerCase().replace(/[^a-z]/g,"");
- const saleableRaw=p=>{const n=norm(p.name);if(!["mirchi","mirachi","namak"].includes(n))return null;const matches=activeRaw.filter(r=>["mirchi","mirachi","namak"].includes(norm(r.name))&&norm(r.name)===n);return matches.find(r=>norm(r.name)===n)||matches[0]||null};
+ const saleableKey=v=>{const n=norm(v);if(n==="mirchi"||n==="mirachi")return "mirchi";if(n==="namak")return "namak";return null};
+ const saleableRaw=p=>{const key=saleableKey(p.name);if(!key)return null;return activeRaw.find(r=>saleableKey(r.name)===key)||null};
  const stockOf=p=>{const raw=saleableRaw(p);return raw?Number(raw.current_stock||0):Number(p.current_stock||0)};
  const latest={};transferPrices.slice().sort((a,b)=>new Date(a.effective_at)-new Date(b.effective_at)||new Date(a.created_at)-new Date(b.created_at)).forEach(x=>latest[x.product_id]=x);
  const available=activeProducts.map(p=>({...p,availableStock:stockOf(p),rawUnit:saleableRaw(p)?.unit})).filter(p=>p.availableStock>0).sort((a,b)=>a.name.localeCompare(b.name));
