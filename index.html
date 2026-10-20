@@ -148,19 +148,22 @@ td{color:#344b40}
  if(profile.role==="outlet"){
   const outletId=profile.outlet_id;
   if(!outletId)throw Error("या Outlet login ला outlet जोडलेला नाही. Owner कडून profile तपासून घ्या.");
-  const [catalogResult,priceResult,orderResult]=await Promise.all([
+  const [catalogResult,priceResult,orderResult,stockResult]=await Promise.all([
    db.from("products").select("id,name,unit,pack_size,photo_path,is_active").eq("is_active",true).order("name"),
    db.from("outlet_prices").select("id,product_id,selling_price,is_active").eq("outlet_id",outletId).eq("is_active",true),
-   db.from("outlet_orders").select("id,order_number,status,goods_total,created_at").eq("outlet_id",outletId).order("created_at",{ascending:false}).limit(5)
+   db.from("outlet_orders").select("id,order_number,status,goods_total,created_at").eq("outlet_id",outletId).order("created_at",{ascending:false}).limit(5),
+   db.from("outlet_stock_balances").select("product_id,quantity,unit,updated_at").eq("outlet_id",outletId)
   ]);
-  if(catalogResult.error)throw catalogResult.error;if(priceResult.error)throw priceResult.error;if(orderResult.error)throw orderResult.error;
-  const catalog=catalogResult.data||[],prices=priceResult.data||[],ownOrders=orderResult.data||[];
+  if(catalogResult.error)throw catalogResult.error;if(priceResult.error)throw priceResult.error;if(orderResult.error)throw orderResult.error;if(stockResult.error)throw stockResult.error;
+  const catalog=catalogResult.data||[],prices=priceResult.data||[],ownOrders=orderResult.data||[],ownStock=stockResult.data||[];
   const listed=catalog.filter(p=>prices.some(q=>q.product_id===p.id));
   const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
   root.innerHTML=header("OUTLET OVERVIEW","नमस्कार, "+esc(profile.full_name||"Outlet"),"तुमच्या रेस्टॉरंटमध्ये वापरण्यासाठी मसाला मागवा किंवा Restaurant Billing सुरू करा.")+
     '<div class="card"><h2>तुमच्या Restaurant साठी</h2><p class="muted">मसाला Amol–Pratik Partnership कडून येतो. Outlet मध्ये तो पदार्थ बनवण्यासाठी वापरा; पुढे मसाला म्हणून विक्री करू नका.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" type="button" data-open-page="restaurant-billing">Restaurant Billing सुरू करा →</button><button class="btn ghost" type="button" data-open-page="orders">वापरण्यासाठी मसाल्याची ऑर्डर करा</button></div></div>'+
    '<div class="section"><h2>तुमच्यासाठी उपलब्ध मसाले</h2><span class="muted">'+listed.length+' products</span></div>'+
    table(["फोटो","मसाल्याचे नाव","पॅक","युनिट","खरेदी किंमत"],listed.map(p=>{const price=prices.find(q=>q.product_id===p.id);return [p.photo_path?'<img src="'+esc(imageUrl(p.photo_path))+'" alt="'+esc(p.name)+'" style="width:58px;height:58px;object-fit:cover;border-radius:10px">':"—",esc(p.name),esc(p.pack_size||"—"),esc(p.unit||"—"),money(price?.selling_price)]}))+
+   '<div class="section"><h2>माझा उपलब्ध मसाला साठा</h2><span class="muted">Delivery झालेला माल</span></div>'+
+   table(["मसाला","उपलब्ध प्रमाण","युनिट","शेवटचा बदल"],ownStock.map(x=>[esc(catalog.find(p=>p.id===x.product_id)?.name||"मसाला"),esc(Number(x.quantity||0).toLocaleString("en-IN")),esc(x.unit||"—"),x.updated_at?new Date(x.updated_at).toLocaleDateString("en-IN"):"—"]))+
    '<div class="section"><h2>माझ्या अलीकडील ऑर्डर्स</h2><span class="muted">फक्त तुमच्या Outlet साठी</span></div>'+
    table(["Order no.","दिनांक","स्थिती","एकूण"],ownOrders.map(o=>[esc(o.order_number||"—"),o.created_at?new Date(o.created_at).toLocaleDateString("en-IN"):"—",esc(o.status||"—"),money(o.goods_total)]))+
    '<div class="notice">फक्त तुमच्या Outlet साठीचे active मसाले व खरेदी दर दाखवले आहेत. इतर Outlet, raw materials किंवा उत्पादन खर्च दिसणार नाहीत.</div>';
