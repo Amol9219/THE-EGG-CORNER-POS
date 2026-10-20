@@ -154,9 +154,9 @@ td{color:#344b40}
  const activeProducts=products.filter(p=>p.is_active);
  const activeRaw=rawItems.filter(r=>r.is_active);
  const norm=v=>String(v||"").toLowerCase().replace(/[^a-z]/g,"");
- const saleableKey=v=>{const n=norm(v);if(n==="mirchi"||n==="mirachi")return "mirchi";if(n==="namak")return "namak";return null};
+ const saleableKey=v=>{const n=norm(v);if(n==="mirchi"||n==="mirachi")return "mirchi";if(n==="namak")return "namak";if(n==="katta")return "katta";return null};
  const saleableRaw=p=>{const key=saleableKey(p.name);if(!key)return null;return activeRaw.find(r=>saleableKey(r.name)===key)||null};
- const stockOf=p=>{const raw=saleableRaw(p);return raw?Number(raw.current_stock||0):Number(p.current_stock||0)};
+ const stockOf=p=>{const raw=saleableRaw(p);return raw?Number(raw.current_stock||0)+Number(p.current_stock||0):Number(p.current_stock||0)};
  const latest={};transferPrices.slice().sort((a,b)=>new Date(a.effective_at)-new Date(b.effective_at)||new Date(a.created_at)-new Date(b.created_at)).forEach(x=>latest[x.product_id]=x);
  const available=activeProducts.map(p=>({...p,availableStock:stockOf(p),rawUnit:saleableRaw(p)?.unit})).filter(p=>p.availableStock>0).sort((a,b)=>a.name.localeCompare(b.name));
  const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -670,8 +670,8 @@ else if(which==="main-kitchen"){
   return;
  }
  const activeProducts=products.filter(p=>p.is_active);
- const saleableRawName=name=>["mirchi","mirachi","namak"].includes(String(name||"").toLowerCase().replace(/[^a-z]/g,""));
- const saleableRawForProduct=p=>{if(!saleableRawName(p.name))return null;const n=String(p.name||"").toLowerCase().replace(/[^a-z]/g,"");const matches=rawMaterials.filter(r=>r.is_active&&(["mirchi","mirachi"].includes(n)?["mirchi","mirachi"].includes(String(r.name||"").toLowerCase().replace(/[^a-z]/g,"")):String(r.name||"").toLowerCase().replace(/[^a-z]/g,"")==="namak"));return matches.find(r=>String(r.name||"").toLowerCase().replace(/[^a-z]/g,"")===n)||matches[0]||null;};
+ const saleableRawName=name=>["mirchi","mirachi","namak","katta"].includes(String(name||"").toLowerCase().replace(/[^a-z]/g,""));
+ const saleableRawForProduct=p=>{if(!saleableRawName(p.name))return null;const n=String(p.name||"").toLowerCase().replace(/[^a-z]/g,"");const matches=rawMaterials.filter(r=>r.is_active&&(["mirchi","mirachi"].includes(n)?["mirchi","mirachi"].includes(String(r.name||"").toLowerCase().replace(/[^a-z]/g,"")):String(r.name||"").toLowerCase().replace(/[^a-z]/g,"")===n));return matches.find(r=>String(r.name||"").toLowerCase().replace(/[^a-z]/g,"")===n)||matches[0]||null;};
  const ownerAvailableStock=p=>{const raw=saleableRawForProduct(p);return raw?Number(raw.current_stock||0):Number(p.current_stock||0);};
  const currentTransferPriceByProduct={};transferPrices.slice().sort((a,b)=>new Date(a.effective_at)-new Date(b.effective_at)||new Date(a.created_at)-new Date(b.created_at)).forEach(x=>{currentTransferPriceByProduct[x.product_id]=Number(x.transfer_price)});
  const money=v=>"₹"+Number(v||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
