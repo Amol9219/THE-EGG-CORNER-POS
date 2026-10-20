@@ -686,15 +686,16 @@ else if(which==="outlet-finance"){
 }
 else if(which==="main-kitchen"){
   if(!allowed(["owner","co_owner"]))throw Error("Owner किंवा Partnership permission आवश्यक आहे.");
- const [products,transferData,expenseData,summaryRes,ownerProfitRes,transferPrices,paymentData,rawMaterials]=await Promise.all([
+ const [products,transferData,expenseData,summaryRes,ownerProfitRes,transferPrices,paymentData,rawMaterials,purchaseInvoiceData]=await Promise.all([
   rows("products","id,name,unit,pack_size,is_active,current_stock"),
-  rows("main_kitchen_transfers","id,transfer_number,transfer_date,product_id,product_name_snapshot,quantity,available_quantity,unit,unit_price,total_amount,notes,status,created_at"),
+  rows("main_kitchen_transfers","id,transfer_number,transfer_date,product_id,product_name_snapshot,quantity,available_quantity,unit,unit_price,total_amount,notes,status,created_at,purchase_invoice_id"),
   profile.role==="co_owner"?rows("main_kitchen_expenses","id,expense_date,category,amount,paid_to,notes,created_at"):Promise.resolve([]),
   profile.role==="co_owner"?db.rpc("tec_partnership_financial_summary"):Promise.resolve({data:{},error:null}),
   Promise.resolve({data:null,error:null}),
   rows("production_transfer_prices","id,product_id,transfer_price,effective_at,created_at"),
   rows("main_kitchen_transfer_payments","id,transfer_id,amount,payment_method,reference_number,notes,paid_at,status,created_by,reviewed_by,reviewed_at,review_note,created_at"),
-  rows("raw_materials","id,name,unit,is_active,current_stock")
+  rows("raw_materials","id,name,unit,is_active,current_stock"),
+  rows("main_kitchen_purchase_invoices","id,invoice_number,invoice_date,notes,total_amount,created_at")
  ]);
  if(summaryRes.error)throw summaryRes.error;
  if(ownerProfitRes?.error)throw ownerProfitRes.error;
