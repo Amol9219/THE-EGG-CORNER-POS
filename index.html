@@ -860,7 +860,7 @@ else if(which==="restaurant-billing"){
 else if(which==="orders"){
  if(!allowed(["co_owner","outlet"]))throw Error("Partnership किंवा Outlet permission आवश्यक आहे.");
  const [outlets,products,prices,orderData,orderLines,businessSettings]=await Promise.all([
-  rows("outlets","id,name,is_active"),rows("products","id,name,unit,pack_size,is_active,current_stock,min_stock"),
+  rows("outlets","id,name,is_active"),rows("products","id,name,unit,pack_size,is_active,current_stock,min_stock,photo_path"),
   rows("outlet_prices","id,outlet_id,product_id,selling_price,is_active"),
   rows("outlet_orders","id,order_number,outlet_id,status,requested_delivery_date,confirmed_delivery_date,delivery_charge,goods_total,notes,submitted_by,approved_by,approved_at,delivered_at,received_confirmed_at,created_at"),
   rows("outlet_order_lines","id,outlet_order_id,product_id,quantity,unit,unit_price,line_total"),
