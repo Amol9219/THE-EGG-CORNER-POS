@@ -28,16 +28,22 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = String(body.action || "invite");
     const redirectTo = "https://tec-masala-business.vercel.app/?auth_action=password";
-    const canManageTarget = (target: { role?: string; staff_role?: string | null; outlet_id?: string | null }) => {
-      if (owner.role === "owner") return true;
-      if (owner.role === "co_owner") return target.role === "outlet" && !target.staff_role;
-      if (owner.role === "outlet") return target.role === "outlet" && ["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) && !!owner.outlet_id && target.outlet_id === owner.outlet_id;
+    const { data: activePartners } = owner.role === "co_owner"
+      ? await admin.from("profiles").select("id").eq("role", "co_owner").eq("is_active", true)
+      : { data: [] as { id: string }[] };
+    const partnerIds = new Set((activePartners || []).map((p: { id: string }) => p.id));
+    if (owner.role === "co_owner") partnerIds.add(owner.id);
+    const canManageTarget = (target: { id?: string; role?: string; staff_role?: string | null; outlet_id?: string | null; created_by?: string | null }) => {
+      if (target.id === owner.id) return false;
+      if (owner.role === "owner") return target.created_by === owner.id;
+      if (owner.role === "co_owner") return target.role === "outlet" && !target.staff_role && !!target.created_by && partnerIds.has(target.created_by);
+      if (owner.role === "outlet") return target.role === "outlet" && ["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) && !!owner.outlet_id && target.outlet_id === owner.outlet_id && target.created_by === owner.id;
       return false;
     };
     if (["get_login_email", "reset_password", "set_password", "update_login_email", "delete_inactive_user"].includes(action)) {
       const userId = String(body.user_id || "").trim();
       if (!userId) throw new Error("User ID आवश्यक आहे.");
-      const { data: target, error: targetError } = await admin.from("profiles").select("id,role,staff_role,outlet_id,is_active,deleted_at").eq("id", userId).maybeSingle();
+      const { data: target, error: targetError } = await admin.from("profiles").select("id,role,staff_role,outlet_id,is_active,deleted_at,created_by").eq("id", userId).maybeSingle();
       if (targetError || !target) throw new Error("User profile सापडला नाही.");
       const canReadPartnerLogin = action === "get_login_email" && owner.role === "co_owner" && target.role === "co_owner";
       if (!canManageTarget(target) && !canReadPartnerLogin) return new Response(JSON.stringify({ error: "या User चे Login व्यवस्थापन करण्याची परवानगी नाही." }), { status: 403, headers: cors });
@@ -73,7 +79,7 @@ Deno.serve(async (req: Request) => {
       const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } });
       if (createError || !created.user) throw new Error(createError?.message || "Could not create staff login.");
       const userId = created.user.id;
-      const { error: profileError } = await admin.from("profiles").insert({ id: userId, full_name, mobile, role: "outlet", staff_role, outlet_id: owner.outlet_id, is_active: true });
+      const { error: profileError } = await admin.from("profiles").insert({ id: userId, full_name, mobile, role: "outlet", staff_role, outlet_id: owner.outlet_id, is_active: true, created_by: authData.user.id });
       if (profileError) {
         await admin.auth.admin.deleteUser(userId);
         throw new Error("Staff profile creation failed: " + profileError.message);
@@ -144,7 +150,7 @@ Deno.serve(async (req: Request) => {
       if (password.length < 8 || password.length > 128) throw new Error("Password must be 8 to 128 characters.");
       const { data: created, error: createError } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } });
       if (createError || !created.user) throw new Error(createError?.message || "Could not create Outlet login.");
-      const { error: profileError } = await admin.from("profiles").insert({ id: created.user.id, full_name, mobile, role: "outlet", outlet_id, is_active: true });
+      const { error: profileError } = await admin.from("profiles").insert({ id: created.user.id, full_name, mobile, role: "outlet", outlet_id, is_active: true, created_by: authData.user.id });
       if (profileError) {
         await admin.auth.admin.deleteUser(created.user.id);
         throw new Error("Outlet profile creation failed: " + profileError.message);
@@ -153,7 +159,7 @@ Deno.serve(async (req: Request) => {
     }
     const { data: invite, error: inviteError } = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo, data: { full_name } } });
     if (inviteError || !invite?.user?.id || !invite?.properties?.action_link) throw new Error(inviteError?.message || "Could not generate invite link. Check Auth settings and whether this email already exists.");
-    const { error: profileError } = await admin.from("profiles").insert({ id: invite.user.id, full_name, mobile, role, outlet_id: role === "outlet" ? outlet_id : null, is_active: true });
+    const { error: profileError } = await admin.from("profiles").insert({ id: invite.user.id, full_name, mobile, role, outlet_id: role === "outlet" ? outlet_id : null, is_active: true, created_by: authData.user.id });
     if (profileError) {
       // Do not delete the Auth user here: generateLink can return an existing user.
       // Deleting that ID could destroy a pre-existing account. Report the error safely.
