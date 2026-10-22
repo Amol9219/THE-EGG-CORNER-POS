@@ -105,6 +105,35 @@ header .app-brand-logo{background:#050505!important;border-radius:9px;padding:3p
 @media(max-width:720px){.rb-table-picker{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.rb-table-choice{min-height:90px;padding:12px 6px;border-radius:14px}.rb-table-choice strong{font-size:23px}.rb-menu-card{width:calc(100% - 8px);grid-template-columns:22px 66px minmax(0,1fr)!important;margin:4px 0;padding:10px!important;gap:8px!important}.rb-menu-card img,.rb-photo-placeholder{width:66px!important;height:66px!important}.rb-menu-card details{grid-column:1/4!important}}
 @media(prefers-reduced-motion:reduce){.rb-table-choice,.rb-menu-card{transition:none}.rb-table-choice:hover{transform:none}}
 
+
+/* Restaurant POS dashboard, kitchen and billing surfaces */
+body:has(#rb-order-form) .section,
+body:has([data-rb-status]) .section,
+body:has([data-rb-bill]) .section,
+body:has([data-rb-pay]) .section{margin:24px 0 12px;padding-bottom:10px;border-bottom:1px solid #e0ebe4}
+body:has(#rb-order-form) .section h2,
+body:has([data-rb-status]) .section h2,
+body:has([data-rb-bill]) .section h2,
+body:has([data-rb-pay]) .section h2{font-size:clamp(18px,2vw,23px);letter-spacing:-.025em;color:#163b2b}
+body:has(#rb-order-form) .card,
+body:has([data-rb-status]) .card,
+body:has([data-rb-bill]) .card,
+body:has([data-rb-pay]) .card{border-color:#e1ebe4;border-radius:18px;box-shadow:0 5px 20px #123c2a0a}
+body:has([data-rb-status]) [data-rb-status],
+body:has([data-rb-bill]) [data-rb-bill],
+body:has([data-rb-pay]) [data-rb-pay]{border-radius:11px;font-weight:750}
+body:has([data-rb-status]) .grid>.card h2{font-size:21px;letter-spacing:-.025em}
+body:has([data-rb-bill]) table,
+body:has([data-rb-pay]) table{border-collapse:separate;border-spacing:0;width:100%;overflow:hidden;border:1px solid #e2ebe5;border-radius:14px;background:#fff}
+body:has([data-rb-bill]) th,
+body:has([data-rb-pay]) th{background:#f0f7f2;color:#355745;font-size:12px;text-transform:uppercase;letter-spacing:.035em}
+body:has([data-rb-bill]) td,body:has([data-rb-bill]) th,
+body:has([data-rb-pay]) td,body:has([data-rb-pay]) th{padding:11px 12px;border-bottom:1px solid #e8efe9;text-align:left}
+body:has([data-rb-bill]) tr:last-child td,
+body:has([data-rb-pay]) tr:last-child td{border-bottom:0}
+body:has(#rb-order-form) .metric{font-size:clamp(22px,3vw,30px);font-weight:850;letter-spacing:-.035em;color:#087547}
+body:has(#rb-order-form) .grid>.card{background:linear-gradient(145deg,#fff,#f8fcf9)}
+
 </style></head><body>
 <div id="login-view" class="login"><div class="brand-watermark" aria-hidden="true"><img class="tec-brand-logo" src="https://isypmwpmqqcopgcmenqz.supabase.co/storage/v1/object/public/TEC%20masala%20images/branding/logo.jpg?v=20261018" alt=""></div><form id="login-form" class="login-card" novalidate><div class="brand login-brand" style="color:var(--ink);margin-bottom:22px"><img class="brand-logo-img tec-brand-logo" src="https://isypmwpmqqcopgcmenqz.supabase.co/storage/v1/object/public/TEC%20masala%20images/branding/logo.jpg?v=20261018" alt="TEC MASALA’S logo"><span><strong>TEC MASALA’S</strong><small>Taste • Quality • Consistency</small></span></div><div class="eyebrow">SECURE SIGN IN · सुरक्षित लॉगिन</div><p class="sub">तुमच्या व्यवसाय खात्याने लॉगिन करा.</p><div class="field"><label for="email">User ID / Email</label><input id="email" type="email" autocomplete="username" placeholder="तुमचा ईमेल" required></div><div class="field"><label for="password">Password / पासवर्ड</label><input id="password" type="password" autocomplete="current-password" required></div><button id="login-submit" class="btn primary">लॉगिन करा</button><div id="login-message" class="notice hidden"></div><p class="muted">Default password नाही. Owner कडून invite link मिळाल्यानंतर password सेट करून लॉगिन करा.</p></form></div>
 <div id="app-view" class="hidden"><header><div class="brand"><button class="btn ghost mobile" id="menu-toggle" aria-label="Open navigation"><span class="nav-icon" data-icon="menu"></span></button><img class="app-brand-logo tec-brand-logo" src="https://isypmwpmqqcopgcmenqz.supabase.co/storage/v1/object/public/TEC%20masala%20images/branding/logo.jpg?v=20261018" alt="TEC MASALA’S logo"><span><strong>TEC MASALA’S</strong><small style="display:block;font-size:10px;font-weight:500;color:var(--muted)">Business</small></span></div><div style="display:flex;gap:10px;align-items:center"><span id="user-tag" class="tag"></span><button id="open-notifications" class="btn ghost" type="button">🔔 Notifications</button><button id="enable-alerts" class="btn ghost" type="button">Ring सुरू करा</button><button id="logout" class="btn ghost">Logout</button></div></header><div id="layout" class="layout"><aside>
