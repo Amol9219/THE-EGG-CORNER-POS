@@ -39,7 +39,8 @@ Deno.serve(async (req: Request) => {
       if (!userId) throw new Error("User ID आवश्यक आहे.");
       const { data: target, error: targetError } = await admin.from("profiles").select("id,role,staff_role,outlet_id,is_active,deleted_at").eq("id", userId).maybeSingle();
       if (targetError || !target) throw new Error("User profile सापडला नाही.");
-      if (!canManageTarget(target)) return new Response(JSON.stringify({ error: "या User चे Login व्यवस्थापन करण्याची परवानगी नाही." }), { status: 403, headers: cors });
+      const canReadPartnerLogin = action === "get_login_email" && owner.role === "co_owner" && target.role === "co_owner";
+      if (!canManageTarget(target) && !canReadPartnerLogin) return new Response(JSON.stringify({ error: "या User चे Login व्यवस्थापन करण्याची परवानगी नाही." }), { status: 403, headers: cors });
       if (target.deleted_at && !["get_login_email", "delete_inactive_user"].includes(action)) throw new Error("Archived User चे Login बदलता येणार नाही. History सुरक्षित ठेवली आहे.");
       if (action === "get_login_email") {
         const { data: authTarget, error: authTargetError } = await admin.auth.admin.getUserById(userId);
