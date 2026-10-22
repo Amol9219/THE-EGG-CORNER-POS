@@ -28,6 +28,32 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = String(body.action || "invite");
     const redirectTo = "https://tec-masala-business.vercel.app/?auth_action=password";
+    const canManageTarget = (target: { role?: string; staff_role?: string | null; outlet_id?: string | null }) => {
+      if (owner.role === "owner") return true;
+      if (owner.role === "co_owner") return target.role === "outlet" && !target.staff_role;
+      if (owner.role === "outlet") return target.role === "outlet" && ["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) && !!owner.outlet_id && target.outlet_id === owner.outlet_id;
+      return false;
+    };
+    if (["get_login_email", "reset_password", "set_password", "update_login_email", "delete_inactive_user"].includes(action)) {
+      const userId = String(body.user_id || "").trim();
+      if (!userId) throw new Error("User ID आवश्यक आहे.");
+      const { data: target, error: targetError } = await admin.from("profiles").select("id,role,staff_role,outlet_id,is_active,deleted_at").eq("id", userId).maybeSingle();
+      if (targetError || !target) throw new Error("User profile सापडला नाही.");
+      if (!canManageTarget(target)) return new Response(JSON.stringify({ error: "या User चे Login व्यवस्थापन करण्याची परवानगी नाही." }), { status: 403, headers: cors });
+      if (action === "get_login_email") {
+        const { data: authTarget, error: authTargetError } = await admin.auth.admin.getUserById(userId);
+        if (authTargetError || !authTarget?.user?.email) throw new Error("Login Email मिळाला नाही.");
+        return new Response(JSON.stringify({ ok: true, email: authTarget.user.email }), { status: 200, headers: cors });
+      }
+      if (action === "delete_inactive_user") {
+        if (userId === authData.user.id) throw new Error("स्वतःचा login delete करता येणार नाही.");
+        if (target.is_active === true) throw new Error("फक्त Inactive User delete करता येतो.");
+        if (target.deleted_at) throw new Error("हा User आधीच delete केलेला आहे.");
+        const { error: markError } = await admin.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("id", userId).eq("is_active", false);
+        if (markError) throw new Error("User archive करता आला नाही: " + markError.message);
+        return new Response(JSON.stringify({ ok: true, message: "Inactive login archive केला; bills आणि history सुरक्षित ठेवली." }), { status: 200, headers: cors });
+      }
+    }
     if (action === "create_restaurant_staff") {
       if (owner.role !== "outlet" || !owner.outlet_id) return new Response(JSON.stringify({ error: "Only an active Outlet account can create its own staff logins." }), { status: 403, headers: cors });
       const email = String(body.email || "").trim().toLowerCase();
@@ -60,11 +86,16 @@ Deno.serve(async (req: Request) => {
       }
       return new Response(JSON.stringify({ ok: true, email, staff_role }), { status: 200, headers: cors });
     }
-    if (action === "reset_password" || action === "update_login_email") {
-      if (owner.role !== "owner") return new Response(JSON.stringify({ error: "Only the main Owner can manage all login credentials." }), { status: 403, headers: cors });
-    }
     if (action === "create_outlet_user" && !["owner", "co_owner"].includes(owner.role)) return new Response(JSON.stringify({ error: "Only Owner or Partnership can create outlet logins." }), { status: 403, headers: cors });
     if (action === "invite" && !["owner", "co_owner"].includes(owner.role)) return new Response(JSON.stringify({ error: "Only Owner or Partnership can invite users." }), { status: 403, headers: cors });
+    if (action === "set_password") {
+      const userId = String(body.user_id || "").trim();
+      const password = String(body.password || "");
+      if (!userId || password.length < 8 || password.length > 128) throw new Error("User ID आणि 8 ते 128 अक्षरांचा password आवश्यक आहे.");
+      const { error: setError } = await admin.auth.admin.updateUserById(userId, { password });
+      if (setError) throw new Error(setError.message);
+      return new Response(JSON.stringify({ ok: true, message: "Password बदलला." }), { status: 200, headers: cors });
+    }
     if (action === "reset_password") {
       const userId = String(body.user_id || "").trim();
       if (!userId) throw new Error("User ID required.");
@@ -88,7 +119,7 @@ Deno.serve(async (req: Request) => {
       if (updateAuthError) throw new Error(updateAuthError.message);
       return new Response(JSON.stringify({ ok: true, email: nextEmail, message: "Login email change request स्वीकारली. Auth settings नुसार नवीन email confirm करावा लागू शकतो." }), { status: 200, headers: cors });
     }
-    if (action !== "invite" && action !== "create_outlet_user") throw new Error("Unsupported action.");
+    if (!["invite", "create_outlet_user"].includes(action)) throw new Error("Unsupported action.");
     const email = String(body.email || "").trim().toLowerCase();
     const full_name = String(body.full_name || "").trim();
     const mobile = String(body.mobile || "").trim() || null;
