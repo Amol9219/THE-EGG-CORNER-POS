@@ -591,14 +591,23 @@ else if(which==="dashboard"){
 }
 else if(which==="users"){
  if(!allowed(["owner","co_owner"]))throw Error("Owner किंवा Partnership permission आवश्यक आहे.");
- const [people,outlets]=await Promise.all([
-  rows("profiles","id,full_name,mobile,role,outlet_id,is_active,created_at,deleted_at"),
+ const [allPeople,outlets]=await Promise.all([
+  rows("profiles","id,full_name,mobile,role,staff_role,outlet_id,is_active,created_at,deleted_at,created_by"),
   rows("outlets","id,name,is_active")
  ]);
+ const partnerIds=new Set(allPeople.filter(x=>x.role==="co_owner"&&x.is_active).map(x=>x.id));
+ if(profile?.role==="co_owner")partnerIds.add(user.id);
+ const people=allPeople.filter(x=>{
+  if(x.id===user.id)return true;
+  if(profile?.role==="owner")return x.created_by===user.id;
+  if(profile?.role==="co_owner")return x.role==="outlet"&&!x.staff_role&&!!x.created_by&&partnerIds.has(x.created_by);
+  return false;
+ });
  const om=Object.fromEntries(outlets.map(x=>[x.id,x.name]));
   const roles={owner:"Owner",production_owner:"Production Owner",co_owner:"Partnership",outlet:"Outlet"};
  const activeOwners=people.filter(x=>(x.role==="owner"||x.role==="production_owner")&&x.is_active).length;
-  root.innerHTML=header("ACCESS CONTROL","Login Management","Owner व Partnership accounts आणि Outlet logins चे access व्यवस्थापन")+
+  root.innerHTML=header("ACCESS CONTROL","Login Management","ज्याने User तयार केला त्यालाच तो दिसेल; Amol–Pratik Partnership ला एकमेकांनी तयार केलेले Outlet users सामायिक दिसतील.")+
+  '<div class="notice"><b>Visibility:</b> Owner ला त्याने तयार केलेले Users; Amol आणि Pratik यांना दोघांनी तयार केलेले Outlet logins; Outlet staff ला फक्त स्वतःच्या Outlet चा access. जुने creator नोंद नसलेले profiles आपोआप कुणाच्या मालकीचे मानले जाणार नाहीत.</div>'+
   '<div class="notice"><b>Amol–Pratik Partnership login:</b> <code>theggcorner@gmail.com</code> आणि <code>pratikpawar246@gmail.com</code> साठी प्रत्येकी स्वतंत्र नोंद करा आणि Role मध्ये <b>Partnership</b> निवडा. Invite link तयार झाल्यावर Copy करून त्या व्यक्तीला पाठवा; ते स्वतः password सेट करतील. Directory मध्ये आधीचा inactive profile असेल तर नवीन duplicate न बनवता त्याचे Edit / Activate वापरा.</div>'+
   '<div class="card"><h2>नवीन User Login तयार करा</h2><form id="profile-form"><div class="form-grid"><div class="field"><label>Full name / नाव</label><input name="full_name" required maxlength="120"></div><div class="field"><label>Email / ईमेल</label><input name="email" type="email" required maxlength="254" placeholder="team@example.com"></div><div class="field"><label>Mobile / फोन</label><input name="mobile" maxlength="30"></div><div class="field"><label>Role / भूमिका</label><select id="profile-role" name="role" required><option value="outlet">Outlet user</option><option value="co_owner">Partnership (Amol / Pratik)</option><option value="owner">Owner</option></select></div><div class="field" id="profile-outlet-wrap"><label>Assigned outlet</label><select id="profile-outlet" name="outlet_id"><option value="">Outlet निवडा</option>'+outlets.filter(x=>x.is_active).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join("")+'</select></div></div><button class="btn primary" type="submit">Invite Link तयार करा</button></form><div id="profile-msg" class="notice hidden"></div></div>'+ '<div class="grid">'+card("users","User profiles",people.length,"Profiles नोंदी")+card("shield-check","Active profiles",people.filter(x=>x.is_active).length,"सक्रिय profiles")+card("store","Outlet users",people.filter(x=>x.role==="outlet").length,"Outlet भूमिका")+card("users","Active owners",activeOwners,"शेवटचा Owner deactivate करता येणार नाही")+'</div>'+
  '<div class="section"><h2>Profile directory</h2><span class="muted">प्रत्येक User चा Login Email, Role आणि Outlet येथे दिसतो. Edit मधून तपशील तपासा; Reset Password किंवा नवीन Password सेट करण्याची सुविधा संबंधित अधिकृत व्यवस्थापकासाठी आहे. जुनी history archive केल्यावरही सुरक्षित राहते.</span></div>'+
