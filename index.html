@@ -141,6 +141,31 @@ body:has([data-rb-pay]) tr:last-child td{border-bottom:0}
 body:has(#rb-order-form) .metric{font-size:clamp(22px,3vw,30px);font-weight:850;letter-spacing:-.035em;color:#087547}
 body:has(#rb-order-form) .grid>.card{background:linear-gradient(145deg,#fff,#f8fcf9)}
 
+</style><style id="tec-modern-ui-layer">
+/* TEC Modern UI Layer 2026 — presentation-only; preserve existing workflows and data logic */
+:root{--tec-surface:#fff;--tec-border:#e5eaf0;--tec-ink:#172b25;--tec-muted:#64748b;--tec-primary:#087f5b;--tec-primary-dark:#066548;--tec-soft:#edf8f2;--tec-radius:16px;--tec-shadow:0 8px 24px rgba(15,35,25,.055)}
+body{background:#f4f7f6;color:var(--tec-ink);letter-spacing:.005em}
+header{box-shadow:0 2px 12px rgba(8,35,24,.12);padding-inline:clamp(12px,2.2vw,28px)}
+.brand{gap:12px}.logo{background:#000!important;color:#fff!important;border-radius:9px;padding:9px 12px;box-shadow:0 2px 8px #0002}
+.layout{grid-template-columns:clamp(210px,19vw,270px) minmax(0,1fr)}
+aside{background:#fff;border-right:1px solid #e5ebe7;padding:16px 12px;gap:5px}
+.nav{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:11px;color:#40534a;transition:background .16s,color .16s,transform .16s}
+.nav.active,.nav:hover{background:#eaf7f0;color:#06734f}.nav:hover{transform:translateX(2px)}
+.caption{color:#8a9a91;letter-spacing:1.15px;padding:16px 12px 5px}
+main{padding:clamp(16px,2.4vw,34px);max-width:1600px}
+h1{letter-spacing:-.035em;font-weight:850}h2{letter-spacing:-.015em;font-weight:780}
+.card,.table-wrap{border-color:var(--tec-border);border-radius:var(--tec-radius);box-shadow:var(--tec-shadow)}
+.card{padding:clamp(14px,1.5vw,22px);transition:box-shadow .18s,border-color .18s}
+.dashboard-link:hover,.dashboard-link:focus-visible{border-color:#8ac9a9;box-shadow:0 10px 28px #0b5b3812}
+.btn{border-radius:11px;min-height:40px;transition:filter .15s,transform .15s,box-shadow .15s}
+.btn:hover{filter:brightness(.97);transform:translateY(-1px)}.primary{background:var(--tec-primary)}.primary:hover{background:var(--tec-primary-dark)}
+input,select,textarea{border-radius:10px!important;border-color:#d8e2dc!important;min-height:40px}
+input:focus,select:focus,textarea:focus{outline:3px solid #0b8b5b20!important;border-color:#4ca77d!important}
+table{border-collapse:separate;border-spacing:0}th{background:#f5f8f6;color:#52665c;font-size:12px;text-transform:uppercase;letter-spacing:.035em}td,th{border-bottom:1px solid #edf1ee}tr:last-child td{border-bottom:0}
+.notice{border-radius:12px}
+@media(max-width:980px){.layout{grid-template-columns:190px minmax(0,1fr)}main{padding:16px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){header{height:auto;min-height:60px;gap:8px;flex-wrap:wrap;padding:10px 12px}.brand{font-size:15px}.layout{display:block;min-height:calc(100vh - 60px)}#layout>aside{position:sticky;top:60px;z-index:4;display:flex;flex-direction:row;overflow-x:auto;white-space:nowrap;border-right:0;border-bottom:1px solid var(--line);padding:7px;gap:5px;scrollbar-width:thin}#layout>aside .caption{display:none}#layout>aside .nav{flex:0 0 auto;padding:9px 11px;font-size:13px}main{padding:14px 12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.card{padding:13px;border-radius:13px}.metric{font-size:23px}.section{gap:10px;align-items:flex-start;flex-wrap:wrap}.table-wrap{max-width:100%}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style></head><body>
 <div id="login-view" class="login"><div class="brand-watermark" aria-hidden="true"><img class="tec-brand-logo" src="https://isypmwpmqqcopgcmenqz.supabase.co/storage/v1/object/public/TEC%20masala%20images/branding/logo.jpg?v=20261018" alt=""></div><form id="login-form" class="login-card" novalidate><div class="brand login-brand" style="color:var(--ink);margin-bottom:22px"><img class="brand-logo-img tec-brand-logo" src="https://isypmwpmqqcopgcmenqz.supabase.co/storage/v1/object/public/TEC%20masala%20images/branding/logo.jpg?v=20261018" alt="TEC MASALA’S logo"><span><strong>TEC MASALA’S</strong><small>Taste • Quality • Consistency</small></span></div><div class="eyebrow">SECURE SIGN IN · सुरक्षित लॉगिन</div><p class="sub">तुमच्या व्यवसाय खात्याने लॉगिन करा.</p><div class="field"><label for="email">User ID / Email</label><input id="email" type="email" autocomplete="username" placeholder="तुमचा ईमेल" required></div><div class="field"><label for="password">Password / पासवर्ड</label><input id="password" type="password" autocomplete="current-password" required></div><button id="login-submit" class="btn primary">लॉगिन करा</button><div id="login-message" class="notice hidden"></div><p class="muted">Default password नाही. Owner कडून invite link मिळाल्यानंतर password सेट करून लॉगिन करा.</p></form></div>
 <div id="app-view" class="hidden"><header><div class="brand"><button class="btn ghost mobile" id="menu-toggle" aria-label="Open navigation"><span class="nav-icon" data-icon="menu"></span></button><img class="app-brand-logo tec-brand-logo" src="https://isypmwpmqqcopgcmenqz.supabase.co/storage/v1/object/public/TEC%20masala%20images/branding/logo.jpg?v=20261018" alt="TEC MASALA’S logo"><span><strong>TEC MASALA’S</strong><small style="display:block;font-size:10px;font-weight:500;color:var(--muted)">Business</small></span></div><div style="display:flex;gap:10px;align-items:center"><span id="user-tag" class="tag"></span><button id="open-notifications" class="btn ghost" type="button">🔔 Notifications</button><button id="enable-alerts" class="btn ghost" type="button">Ring सुरू करा</button><button id="logout" class="btn ghost">Logout</button></div></header><div id="layout" class="layout"><aside>
