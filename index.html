@@ -89,6 +89,30 @@ header .app-brand-logo{background:#050505!important;border-radius:10px;padding:3
 @media(prefers-reduced-motion:reduce){.rb-table-choice,.rb-menu-card{transition:none}.rb-table-choice:hover{transform:none}}
 
 
+
+/* TEC modern usability layer — presentation only; preserve existing business logic */
+:root{--tec-modern-ink:#18251f;--tec-modern-muted:#64736b;--tec-modern-line:#e3eae5;--tec-modern-surface:#fff;--tec-modern-soft:#f5f8f6;--tec-modern-green:#176b45;--tec-modern-radius:16px}
+body{color:var(--tec-modern-ink);-webkit-font-smoothing:antialiased}
+header{backdrop-filter:saturate(150%) blur(14px)}
+.layout{gap:22px}
+.layout>aside{border:1px solid var(--tec-modern-line);border-radius:18px;padding:14px;background:linear-gradient(180deg,#fff,#f8faf8);box-shadow:0 8px 28px #102c1b08}
+.nav{border-radius:11px;min-height:42px;transition:background .16s ease,color .16s ease,transform .16s ease}
+.nav:hover{transform:translateX(2px);background:#eaf3ed}
+.nav.active{background:#e4f2e9;color:#145d3b;font-weight:750;box-shadow:inset 3px 0 #208354}
+main,.main{min-width:0}
+.card,.panel,.section{min-width:0}
+.card{transition:border-color .16s ease,box-shadow .16s ease}
+button,.btn,input,select,textarea{font:inherit}
+button,.btn{transition:transform .12s ease,box-shadow .12s ease,filter .12s ease}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #4a9b73;outline-offset:2px}
+input,select,textarea{max-width:100%;border-radius:10px}
+table{max-width:100%}
+img{max-width:100%}
+#login-view .login-brand .brand-logo-img,header .app-brand-logo{background:#050505!important;box-shadow:0 3px 12px #0002}
+@media(max-width:900px){.layout{gap:12px}.layout>aside{border-radius:14px;padding:10px}.nav{min-height:40px}}
+@media(max-width:600px){body{font-size:14px}.layout{display:block}.layout>aside{margin-bottom:14px}.card{border-radius:14px}button,.btn{min-height:40px}table{display:block;overflow-x:auto;white-space:nowrap}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
 /* Restaurant POS dashboard, kitchen and billing surfaces */
 body:has(#rb-order-form) .section,
 body:has([data-rb-status]) .section,
