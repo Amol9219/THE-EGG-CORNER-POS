@@ -56,26 +56,9 @@ td{color:#344b40}
 #user-tag{margin-right:2px}#logout{white-space:nowrap}\n@media print{body.printing-invoice *{visibility:hidden!important}body.printing-invoice #invoice-preview,body.printing-invoice #invoice-preview *{visibility:visible!important}body.printing-invoice #invoice-preview{display:block!important;position:fixed;inset:0;width:100%;padding:24px;background:#fff;color:#111;overflow:visible}body.printing-invoice #invoice-preview .invoice-sheet{max-width:760px;margin:0 auto;border:0;box-shadow:none;color:#111}@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 
 
-/* Black backing only behind the TEC logo on login and app header */
-#login-view .login-brand .brand-logo-img{background:#050505!important;border-radius:10px;padding:3px;object-fit:contain}
-header .app-brand-logo{background:#050505!important;border-radius:9px;padding:3px;object-fit:contain}
-/* Dark TEC MASALA sign-in theme */
-#login-view.login{background:radial-gradient(ellipse at 15% 10%,#3b1010 0%,transparent 42%),radial-gradient(ellipse at 90% 90%,#063b2c 0%,transparent 45%),#050505;color:#f8fafc;isolation:isolate}
-#login-view .login-card{background:rgba(15,15,15,.94);border:1px solid #393939;box-shadow:0 24px 80px #000b;color:#f8fafc;backdrop-filter:blur(8px)}
-#login-view .login-brand{color:#fff!important}
-#login-view .login-brand strong{color:#fff}
-#login-view .login-brand small{display:block;color:#d1d5db}
-#login-view .eyebrow{color:#86efac}
-#login-view .sub,#login-view .muted{color:#c4c4c4}
-#login-view .field label{color:#f3f4f6}
-#login-view input{background:#202020;color:#fff;border:1px solid #484848;border-radius:10px}
-#login-view input::placeholder{color:#a3a3a3}
-#login-view input:focus{border-color:#22c55e;outline:2px solid #16653455}
-#login-view .brand-watermark{z-index:0}
-#login-view .brand-watermark img{width:min(145vw,1120px);max-height:125vh;opacity:.34;filter:drop-shadow(0 0 32px #16a34a38);animation:loginLogoZoom 7s ease-in-out infinite alternate}
-#login-view .login-card{z-index:2;position:relative}
-#login-view .notice{background:#202020;color:#f8fafc;border-color:#484848}
-@media(prefers-reduced-motion:reduce){#login-view .brand-watermark img{animation:none}}
+/* Keep the original login and app colors/layout; black backing is limited to the logo image area. */
+#login-view .login-brand .brand-logo-img,
+header .app-brand-logo{background:#050505!important;border-radius:10px;padding:3px;object-fit:contain}
 
 /* Restaurant POS refresh */
 .rb-table-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;margin:12px 0 18px}.rb-table-choice{border:1px solid var(--line);background:var(--card,#fff);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--ink);box-shadow:0 2px 8px #00000008}.rb-table-choice strong{font-size:24px;line-height:1.1}.rb-table-choice small{font-size:12px;color:var(--muted)}.rb-table-choice.is-active{border:2px solid var(--accent,#16a34a);background:var(--accent-soft,#f0fdf4)}.rb-table-choice.is-occupied{border-color:#f59e0b}.rb-menu-card{display:inline-grid!important;grid-template-columns:22px 48px minmax(0,1fr)!important;gap:8px!important;align-items:center!important;border:1px solid var(--line)!important;border-radius:14px!important;padding:10px!important;background:var(--card,#fff);width:calc(50% - 32px);vertical-align:top;box-sizing:content-box}.rb-menu-card>span{min-width:0}.rb-menu-card img{width:48px!important;height:48px!important;object-fit:cover;border-radius:10px}.rb-menu-card input[type=number]{grid-column:3;width:100%!important;box-sizing:border-box}.rb-menu-card details{grid-column:1/4!important;border-top:1px solid var(--line);padding-top:6px}@media(max-width:640px){.rb-table-picker{grid-template-columns:repeat(3,minmax(0,1fr))}.rb-menu-card{width:calc(100% - 22px);margin:4px 0}}
