@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
     const canManageTarget = (target: { id?: string; role?: string; staff_role?: string | null; outlet_id?: string | null; created_by?: string | null }) => {
       if (target.id === owner.id) return false;
       if (owner.role === "owner") return target.created_by === owner.id;
-      if (owner.role === "co_owner") return target.role === "outlet" && !target.staff_role;
+      if (owner.role === "co_owner") return target.role === "outlet" && !target.staff_role && !!target.created_by && partnerIds.has(target.created_by);
       if (owner.role === "outlet") return target.role === "outlet" && ["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) && !!owner.outlet_id && target.outlet_id === owner.outlet_id && target.created_by === owner.id;
       return false;
     };
