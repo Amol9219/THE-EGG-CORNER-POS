@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
       if (owner.role === "outlet") return target.role === "outlet" && ["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) && !!owner.outlet_id && target.outlet_id === owner.outlet_id && target.created_by === owner.id;
       return false;
     };
-    if (["get_login_email", "reset_password", "set_password", "update_login_email", "delete_inactive_user", "update_profile"].includes(action)) {
+    if (["get_login_email", "reset_password", "set_password", "update_login_email", "delete_inactive_user", "update_profile", "set_active"].includes(action)) {
       const userId = String(body.user_id || "").trim();
       if (!userId) throw new Error("User ID आवश्यक आहे.");
       const { data: target, error: targetError } = await admin.from("profiles").select("id,role,staff_role,outlet_id,is_active,deleted_at,created_by").eq("id", userId).maybeSingle();
@@ -60,6 +60,19 @@ Deno.serve(async (req: Request) => {
         const { error: markError } = await admin.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("id", userId).eq("is_active", false);
         if (markError) throw new Error("User archive करता आला नाही: " + markError.message);
         return new Response(JSON.stringify({ ok: true, message: "Inactive login archive केला; bills आणि history सुरक्षित ठेवली." }), { status: 200, headers: cors });
+      }
+      if (action === "set_active") {
+        if (userId === authData.user.id) throw new Error("स्वतःचा login इथून deactivate करता येणार नाही.");
+        if (target.deleted_at) throw new Error("Archived User पुन्हा activate करण्यासाठी admin recovery आवश्यक आहे.");
+        const nextActive = body.is_active === true;
+        if (!nextActive && ["owner", "production_owner"].includes(target.role) && target.is_active === true) {
+          const { count, error: countError } = await admin.from("profiles").select("id", { count: "exact", head: true }).in("role", ["owner", "production_owner"]).eq("is_active", true);
+          if (countError) throw new Error("Active Owner तपासता आला नाही.");
+          if ((count || 0) <= 1) throw new Error("किमान एक Active Owner आवश्यक आहे.");
+        }
+        const { error: activeError } = await admin.from("profiles").update({ is_active: nextActive }).eq("id", userId);
+        if (activeError) throw new Error("User status बदलला नाही: " + activeError.message);
+        return new Response(JSON.stringify({ ok: true, is_active: nextActive, message: nextActive ? "User पुन्हा Active केला." : "User Deactivate केला." }), { status: 200, headers: cors });
       }
       if (action === "update_profile") {
         if (userId === authData.user.id) throw new Error("स्वतःचा profile या विभागातून edit करता येणार नाही.");
