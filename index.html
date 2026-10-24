@@ -142,18 +142,38 @@ body:has(#rb-order-form) .metric{font-size:clamp(22px,3vw,30px);font-weight:850;
 body:has(#rb-order-form) .grid>.card{background:linear-gradient(145deg,#fff,#f8fcf9)}
 
 
-/* Modern usability polish: preserve existing business logic and brand assets. */
-:root{--radius:16px}
-button,.btn,.nav,.rb-table-choice{transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease,background-color .14s ease}
-button:focus-visible,.btn:focus-visible,.nav:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #34d399;outline-offset:2px}
-.card,.section,.login-card{box-shadow:0 5px 22px rgba(15,45,32,.055)}
-.card{border-radius:16px}
-.btn{min-height:40px;font-weight:700}
-input,select,textarea{border-radius:10px}
-header .app-brand-logo{background:#000;padding:5px;border-radius:8px;object-fit:contain}
-.login-brand .brand-logo-img{background:#000;padding:6px;border-radius:9px;object-fit:contain}
-.brand-watermark .tec-brand-logo{background:#000;border-radius:10px;padding:6px;object-fit:contain}
-@media(max-width:650px){main{padding:12px 10px}.section{gap:8px}.btn{min-height:42px}.card{border-radius:14px}}
+
+/* TEC modern interface pass: visual-only improvements; keep existing workflows intact. */
+:root{--bg:#f4f7f6;--line:#e3eae7;--ink:#172b25;--muted:#63736c;--panel:#fff;--radius:18px}
+body{letter-spacing:-.008em;background:linear-gradient(180deg,#f5f8f6 0%,#f1f5f3 100%)}
+header{box-shadow:0 3px 18px rgba(8,40,27,.12);backdrop-filter:saturate(140%)}
+#layout{gap:20px}
+aside{scrollbar-width:thin}
+.nav{border-radius:11px;margin:3px 8px;width:calc(100% - 16px);min-height:42px;text-align:left;transition:background .16s ease,color .16s ease,transform .16s ease}
+.nav:hover{transform:translateX(2px);background:#eaf5ee;color:#075c3c}
+.nav.active{background:linear-gradient(120deg,#08784b,#0b9860);color:#fff;box-shadow:0 5px 14px rgba(8,120,75,.18)}
+main{min-width:0}
+.card,.section,.login-card{border:1px solid rgba(215,228,220,.9);border-radius:18px;box-shadow:0 6px 24px rgba(19,48,35,.055);background:rgba(255,255,255,.96)}
+.section{padding:16px 18px}
+h1,h2,h3{letter-spacing:-.035em}
+h1{font-size:clamp(23px,2.4vw,32px);line-height:1.2}
+h2{font-size:clamp(17px,1.6vw,22px)}
+.btn,button{transition:transform .14s ease,box-shadow .14s ease,filter .14s ease}
+.btn:hover,button:hover{filter:brightness(.985)}
+.btn.primary,.btn.success{box-shadow:0 4px 12px rgba(4,120,87,.14)}
+input,select,textarea{min-height:40px;border:1px solid #d8e3dc;background:#fff}
+input:hover,select:hover,textarea:hover{border-color:#9bb9a7}
+table{font-variant-numeric:tabular-nums}
+th{white-space:nowrap}
+.metric{font-variant-numeric:tabular-nums}
+.login-card{box-shadow:0 18px 55px rgba(14,45,31,.13)}
+.login-brand,.brand-watermark{background:#000;border-radius:12px}
+.login-brand .brand-logo-img,.brand-watermark .tec-brand-logo,header .app-brand-logo{display:block;background:#000;padding:6px;border-radius:9px;object-fit:contain}
+.rb-table-choice{min-height:94px;border-radius:16px;border:1px solid #d9e7de;background:linear-gradient(145deg,#fff,#f4faf6);box-shadow:0 4px 14px rgba(20,65,42,.055)}
+.rb-table-choice:hover{border-color:#0b9660;box-shadow:0 8px 20px rgba(8,120,75,.12);transform:translateY(-2px)}
+@media(max-width:900px){#layout{gap:12px}aside{max-width:230px}}
+@media(max-width:650px){header{padding:0 10px;gap:8px}#layout{display:block}aside{max-width:none;width:100%;position:relative;overflow-x:auto;display:flex;gap:5px;padding:8px}aside .caption{display:none}aside .nav{width:auto;white-space:nowrap;flex:0 0 auto;margin:0}main{padding:12px 10px}.section{padding:13px}.card{padding:14px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
 </style><style id="tec-modern-ui-layer">
 /* TEC Modern UI Layer 2026 — presentation-only; preserve existing workflows and data logic */
