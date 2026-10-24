@@ -141,6 +141,20 @@ body:has([data-rb-pay]) tr:last-child td{border-bottom:0}
 body:has(#rb-order-form) .metric{font-size:clamp(22px,3vw,30px);font-weight:850;letter-spacing:-.035em;color:#087547}
 body:has(#rb-order-form) .grid>.card{background:linear-gradient(145deg,#fff,#f8fcf9)}
 
+
+/* Modern usability polish: preserve existing business logic and brand assets. */
+:root{--radius:16px}
+button,.btn,.nav,.rb-table-choice{transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease,background-color .14s ease}
+button:focus-visible,.btn:focus-visible,.nav:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #34d399;outline-offset:2px}
+.card,.section,.login-card{box-shadow:0 5px 22px rgba(15,45,32,.055)}
+.card{border-radius:16px}
+.btn{min-height:40px;font-weight:700}
+input,select,textarea{border-radius:10px}
+header .app-brand-logo{background:#000;padding:5px;border-radius:8px;object-fit:contain}
+.login-brand .brand-logo-img{background:#000;padding:6px;border-radius:9px;object-fit:contain}
+.brand-watermark .tec-brand-logo{background:#000;border-radius:10px;padding:6px;object-fit:contain}
+@media(max-width:650px){main{padding:12px 10px}.section{gap:8px}.btn{min-height:42px}.card{border-radius:14px}}
+
 </style><style id="tec-modern-ui-layer">
 /* TEC Modern UI Layer 2026 — presentation-only; preserve existing workflows and data logic */
 :root{--tec-surface:#fff;--tec-border:#e5eaf0;--tec-ink:#172b25;--tec-muted:#64748b;--tec-primary:#087f5b;--tec-primary-dark:#066548;--tec-soft:#edf8f2;--tec-radius:16px;--tec-shadow:0 8px 24px rgba(15,35,25,.055)}
