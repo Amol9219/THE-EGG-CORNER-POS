@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
       if (owner.role === "outlet") return target.role === "outlet" && ["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) && !!owner.outlet_id && target.outlet_id === owner.outlet_id && target.created_by === owner.id;
       return false;
     };
-    if (["get_login_email", "reset_password", "set_password", "update_login_email", "delete_inactive_user"].includes(action)) {
+    if (["get_login_email", "reset_password", "set_password", "update_login_email", "delete_inactive_user", "update_profile"].includes(action)) {
       const userId = String(body.user_id || "").trim();
       if (!userId) throw new Error("User ID आवश्यक आहे.");
       const { data: target, error: targetError } = await admin.from("profiles").select("id,role,staff_role,outlet_id,is_active,deleted_at,created_by").eq("id", userId).maybeSingle();
@@ -60,6 +60,46 @@ Deno.serve(async (req: Request) => {
         const { error: markError } = await admin.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("id", userId).eq("is_active", false);
         if (markError) throw new Error("User archive करता आला नाही: " + markError.message);
         return new Response(JSON.stringify({ ok: true, message: "Inactive login archive केला; bills आणि history सुरक्षित ठेवली." }), { status: 200, headers: cors });
+      }
+      if (action === "update_profile") {
+        if (userId === authData.user.id) throw new Error("स्वतःचा profile या विभागातून edit करता येणार नाही.");
+        const full_name = String(body.full_name || "").trim();
+        const mobile = String(body.mobile || "").trim() || null;
+        if (!full_name || full_name.length > 120 || (mobile && mobile.length > 30)) throw new Error("नाव आवश्यक आहे; नाव 120 आणि mobile 30 अक्षरांपर्यंत असावा.");
+        const patch: Record<string, unknown> = { full_name, mobile };
+        if (owner.role === "owner") {
+          const role = String(body.role || target.role || "");
+          const outlet_id = body.outlet_id ? String(body.outlet_id) : null;
+          if (!["owner", "co_owner", "outlet"].includes(role)) throw new Error("अवैध Role.");
+          if (role === "outlet") {
+            if (!outlet_id) throw new Error("Outlet user साठी Outlet निवडा.");
+            const { data: outlet, error: outletError } = await admin.from("outlets").select("id,is_active").eq("id", outlet_id).maybeSingle();
+            if (outletError || !outlet || outlet.is_active !== true) throw new Error("निवडलेले Outlet उपलब्ध/Active नाही.");
+          } else if (outlet_id) throw new Error("फक्त Outlet user ला Outlet assign करता येतो.");
+          if (target.role === "owner" && target.is_active === true && role !== "owner") {
+            const { count, error: countError } = await admin.from("profiles").select("id", { count: "exact", head: true }).in("role", ["owner", "production_owner"]).eq("is_active", true);
+            if (countError) throw new Error("Active Owner तपासता आला नाही.");
+            if ((count || 0) <= 1) throw new Error("किमान एक Active Owner आवश्यक आहे.");
+          }
+          patch.role = role;
+          patch.outlet_id = role === "outlet" ? outlet_id : null;
+        } else if (owner.role === "outlet") {
+          if (target.role !== "outlet" || !["waiter", "kitchen", "counter"].includes(String(target.staff_role || "")) || target.outlet_id !== owner.outlet_id || target.created_by !== owner.id) throw new Error("फक्त स्वतःच्या Outlet मधील कर्मचारी edit करता येतात.");
+          const staff_role = String(body.staff_role || target.staff_role || "");
+          if (!["waiter", "kitchen", "counter"].includes(staff_role)) throw new Error("Waiter, Kitchen किंवा Counter role निवडा.");
+          patch.staff_role = staff_role;
+        } else {
+          if (target.role !== "outlet" || target.staff_role || owner.role !== "co_owner") throw new Error("या User चे profile edit करण्याची परवानगी नाही.");
+          patch.role = "outlet";
+          patch.outlet_id = target.outlet_id;
+        }
+        const { error: updateError } = await admin.from("profiles").update(patch).eq("id", userId);
+        if (updateError) throw new Error("User तपशील जतन झाले नाहीत: " + updateError.message);
+        if (target.staff_role === "waiter" || (owner.role === "outlet" && body.staff_role === "waiter")) {
+          await admin.from("restaurant_waiters").update({ waiter_name: full_name }).eq("user_id", userId);
+        }
+        await admin.auth.admin.updateUserById(userId, { user_metadata: { full_name } });
+        return new Response(JSON.stringify({ ok: true, message: "User तपशील जतन झाले." }), { status: 200, headers: cors });
       }
     }
     if (action === "create_restaurant_staff") {
